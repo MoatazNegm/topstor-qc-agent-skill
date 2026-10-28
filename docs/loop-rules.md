@@ -89,7 +89,8 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
   --from-platform`), in the order the platform offers them.
 - `tools/loop-state.sh test-done <id> pass|fail` after each test; `code-change <branch> <reason>` after each push. A code change
   restarts the clean count at 0: the clean iteration must be a full pass of all tests AFTER the last code change.
-- `tools/loop-state.sh is-clean` = every test of the iteration passed since the last code change. Only then `tools/git-pr.sh`.
+- `tools/loop-state.sh is-clean` = one whole iteration with no failure and no code change (a test that failed and passed later makes
+  its iteration dirty). Only then `tools/git-pr.sh`.
 - New cycle = regression check: from the second pass over the tests every earlier fix must hold. A step that fails again: find out
   which it is (fix not deployed on the nodes that ran it, a later change broke it, the tool changed, or a new bug) and say it.
 

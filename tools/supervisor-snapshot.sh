@@ -1,5 +1,5 @@
 #!/bin/bash
-# supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted forkwatch.sh): clock, platform active test, loop
+# supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted from the original harness watch script): clock, platform active test, loop
 # state, every registered agent (last status, age, STUCK flag), the newest round's NOW / STEPCHECK / STOP / HOLD lines and steps
 # submitted since the last snapshot, the newest build status, node states, and whether zpool answers. Read-only.
 . "$(dirname "$(readlink -f "$0")")/lib/qc.sh"

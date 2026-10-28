@@ -17,7 +17,8 @@ pull requests to the upstream `moataznegm` repos for all three.
    password(s), a git "store" credential file with your GitHub token, optional ssh keys.
 3. `cp config/input.example.yaml config/input.yaml` and fill in every `CHANGE_ME`: nodes (name, type, address, container / ssh user /
    VM name, role, cluster), platform URL and app id, the key and password FILE paths, your three repos and clones, the upstream repos
-   and base branch. `config/input.yaml` is git-ignored.
+   and base branch, the `deploy:` section (push command and node software repo URL: how a fix reaches the nodes) and, for the container
+   flavour, `container_host:` (the disk regexes name files the tools WIPE). `config/input.yaml` is git-ignored.
 4. `tools/preflight.sh` until it prints `PREFLIGHT OK` (rc 2 = the config is missing or incomplete; it names the fields).
 5. `tests/selftest.sh` (offline check of the tools; touches nothing).
 6. Start your agent as the SUPERVISOR with `SKILL.md` and `docs/roles/supervisor.md`. It starts fresh agents for each test

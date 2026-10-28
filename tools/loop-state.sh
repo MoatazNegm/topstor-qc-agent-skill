@@ -32,10 +32,12 @@ elif cmd=="test-done":
         s["iteration"]+=1; s["done"]={}; s["dirty"]=False
     save()
 elif cmd=="code-change":
-    # a pushed fix: the version under test changed, so the NEXT run is a whole new iteration from the first test (CLAUDE.md
+    # a pushed fix: the version under test changed, so the NEXT run is a whole new iteration from the first test (standing rule:
     # "a new version makes the next run iteration 1 again"); every earlier clean result is void.
     s["changes"].append({"time":time.strftime("%F %T"),"branch":a[1],"reason":" ".join(a[2:]),"at_iteration":s["iteration"]})
-    s["clean_in_row"]=0; s["clean_iterations"]=0; s["iteration"]+=1; s["done"]={}; s["dirty"]=False; save()
+    s["clean_in_row"]=0; s["clean_iterations"]=0; s["dirty"]=False
+    if s["done"]: s["iteration"]+=1      # an open iteration is abandoned; a just-closed one already advanced the number
+    s["done"]={}; save()
 elif cmd=="is-clean":
     ok=bool(s["tests"]) and s["clean_iterations"]>=1
     print("CLEAN: one full iteration passed with no failure and no code change" if ok else "NOT CLEAN"); sys.exit(0 if ok else 1)

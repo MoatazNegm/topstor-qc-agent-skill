@@ -65,10 +65,20 @@ repos:
     topstor: /TopStor
     pace: /pace
     topstorweb: /topstorweb
+container_host:
+  test_disk_regex: '^$T/disks/'
+  stale_loop_regex: '^$T/disks/.*\.img$'
+deploy:
+  method: product-push
+  push_command: 'true {branch}'
+  software_repo_check_from: local
+  software_repo:
+    topstor: $T/bare.git
 loop:
   iteration_tests: [10, 11]
 state_dir: $T/state
 EOF
+git init -q --bare "$T/bare.git"; git init -q "$T/seed" && git -C "$T/seed" -c user.email=a@b -c user.name=t commit -q --allow-empty -m x && git -C "$T/seed" push -q "$T/bare.git" HEAD:refs/heads/QSD5.1 2>/dev/null
 export QC_CONFIG=$T/input.yaml QC_ALLOW_MIXED_TYPES=1
 TL=$ROOT/tools
 python3 -I "$TL/lib/cfg.py" validate > "$T/v.out" 2>&1; ck $? 0 "complete config validates"
@@ -110,9 +120,36 @@ echo "10:5" > "$T/state/ledger/b10i1.sent"; "$TL/qc-submit.sh" b10i1 10 5 pass "
 # DRYRUN must not touch the host: shims record any call of a mutating command
 mkdir -p "$T/shim"; printf '#!/bin/sh\n[ "$1" = list ] || echo "zpool $*" >> "%s/marker"\nexit 0\n' "$T/shim" > "$T/shim/zpool"; chmod +x "$T/shim/zpool"
 for c in dd wipefs losetup curl targetcli iscsiadm partx mknod truncate; do printf '#!/bin/sh\necho "$0 $*" >> "%s/marker"\nexit 0\n' "$T/shim" > "$T/shim/$c"; chmod +x "$T/shim/$c"; done
-for t in host-kernelclean.sh host-stale-clean.sh cluster-build-repl.sh cluster-reset.sh cluster-join.sh ts-disk-add.sh; do
-	rm -f "$T/shim/marker"; PATH="$T/shim:$PATH" DRYRUN=1 "$TL/$t" b9 1 > "$T/dry.out" 2>&1 < /dev/null
-	[ ! -e "$T/shim/marker" ]; ck $? 0 "DRYRUN $t does not run a mutating host command"; done
+# losetup READS are answered by the shim with one fake test loop (so the tools get past "no loops"); only mutations are recorded
+printf '#!/bin/sh\ncase "$1" in -l|-nO|-n) echo "/dev/loop99 %s/disks/x.img"; exit 0;; esac\necho "$0 $*" >> "%s/marker"\nexit 0\n' "$T" "$T/shim" > "$T/shim/losetup"; chmod +x "$T/shim/losetup"
+# G-06: DRYRUN checks that really reach the DRYRUN branch (own container-only config with two clusters; the container names do not exist)
+mkdir -p "$T/disks" "$T/lf"; : > "$T/lf/a"
+sed -n '1,/^nodes:/p' "$T/input.yaml" | sed '$d' | sed "s#^  settle_seconds: 1#  settle_seconds: 1\n  second_cluster_ip: 10.0.0.210\n  second_admin_password_file: $T/pw#" > "$T/dry.yaml"
+cat >> "$T/dry.yaml" <<EOF
+nodes:
+  - {name: d1, type: container, container: selftest-ctr-d1, host: 10.0.0.211, alias: d1, role: primary, cluster: 1}
+  - {name: d2, type: container, container: selftest-ctr-d2, host: 10.0.0.212, alias: d2, role: member, cluster: 1}
+  - {name: e1, type: container, container: selftest-ctr-e1, host: 10.0.0.221, alias: e1, role: primary, cluster: 2}
+$(sed -n '/^repos:/,$p' "$T/input.yaml" | sed '/^container_host:/,/^deploy:/{/^deploy:/!d}' | sed '/^state_dir:/d')
+container_host:
+  test_disk_regex: '^$T/disks/'
+  stale_loop_regex: '^$T/disks/.*\.img$'
+  disk_dir: $T/disks
+  loopdisks_files: [$T/lf/a]
+state_dir: $T/state
+EOF
+QC_CONFIG=$T/dry.yaml python3 -I "$TL/lib/cfg.py" validate > "$T/dv.out" 2>&1; ck $? 0 "DRYRUN config validates ($(tail -n1 "$T/dv.out" | cut -c1-80))"
+for c in "host-kernelclean.sh" "host-stale-clean.sh" "cluster-build-repl.sh b9" "cluster-reset.sh b9" "cluster-join.sh d2" "ts-disk-add.sh 1"; do
+	rm -f "$T/shim/marker"; QC_CONFIG=$T/dry.yaml PATH="$T/shim:$PATH" DRYRUN=1 "$TL/${c%% *}" ${c#"${c%% *}"} > "$T/dry2.out" 2>&1 < /dev/null
+	grep -q 'DRYRUN' "$T/dry2.out"; ck $? 0 "DRYRUN ${c%% *} reaches its DRYRUN branch ($(grep -m1 DRYRUN "$T/dry2.out" | cut -c1-60))"
+	[ ! -e "$T/shim/marker" ]; ck $? 0 "DRYRUN ${c%% *} ran no mutating command"; done
+# G-01: the branch check runs from this machine, with every node stopped; missing vs not reachable are told apart
+"$TL/code-deploy.sh" --check-branch QSD5.1 > "$T/cb.out" 2>&1; ck $? 0 "check-branch: branch present, nodes stopped"
+"$TL/code-deploy.sh" --check-branch QSD5.404 > "$T/cb.out" 2>&1; ck "$?$(grep -c MISSING "$T/cb.out")" 11 "check-branch: missing branch -> rc 1 MISSING"
+sed "s#$T/bare.git#$T/nonexistent.git#" "$T/input.yaml" > "$T/unr.yaml"; QC_CONFIG=$T/unr.yaml "$TL/code-deploy.sh" --check-branch QSD5.1 > "$T/cb.out" 2>&1; ck "$?$(grep -c 'not reachable' "$T/cb.out")" 21 "check-branch: repo not reachable -> rc 2, not 'missing'"
+# G-03: the last test of an iteration fails, then a code change: the iteration number advances once
+rm -f "$T"/state/loop*.json 2>/dev/null; LS="$TL/loop-state.sh"
+$LS set-tests 10 11 >/dev/null; $LS test-done 10 pass >/dev/null; $LS test-done 11 fail >/dev/null; $LS code-change QSD5.9 x >/dev/null; $LS show | grep -q '^iteration 2:'; ck $? 0 "code-change after a closed iteration does not skip an iteration number"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"
 grep -q "$(cat "$T/key")" -r "$T/state" 2>/dev/null; ck $? 1 "fake key never written into the state dir"
 echo "selftest: $pass passed, $fail failed"; [ $fail = 0 ]

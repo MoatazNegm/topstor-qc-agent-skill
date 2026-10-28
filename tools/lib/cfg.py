@@ -207,6 +207,19 @@ def validate(c):
     if dig(c, "cluster.reset_admin_password_file"):
         need_file("cluster.reset_admin_password_file")
 
+    if fl == "container":
+        need("container_host.test_disk_regex", "regex of the backing files the tests may wipe (the tools delete what it matches)")
+        need("container_host.stale_loop_regex", "regex of leftover loop backing files")
+    dm = dig(c, "deploy.method") or "product-push"
+    if dm not in ("product-push", "bundle"):
+        errs.append("deploy.method: must be product-push or bundle")
+    if dm == "product-push":
+        need("deploy.push_command", "the product's push into the node software repo (see config/input.example.yaml)")
+        if not any(dig(c, "deploy.software_repo." + r) for r in ("topstor", "pace", "topstorweb")):
+            errs.append("deploy.software_repo.*: give the git URL of the node software repo (as the nodes see it) so the arrival of a pushed branch can be checked")
+    if dig(c, "deploy.software_repo_check_from") not in (None, "", "local", "node"):
+        errs.append("deploy.software_repo_check_from: must be local or node")
+
     nodes = c.get("nodes")
     if not isinstance(nodes, list) or not nodes:
         errs.append("nodes: at least one node is needed")

@@ -4,9 +4,9 @@ TS_PORT=$(cfg get cluster.api_port 5001)
 TS_USER=$(cfg get cluster.admin_user admin)
 # pwfile_for <cluster ip>: the admin password file of that cluster (cluster 1 or the second cluster)
 pwfile_for() { if [ -n "$1" ] && [ "$1" = "$(cfg get cluster.second_cluster_ip)" ]; then cfg get cluster.second_admin_password_file; else cfg get cluster.admin_password_file; fi; }
-# ts_token <ip> [password file] -> token on stdout (empty / "baduser" on failure)
+# ts_token <ip> [password file] [user, default cluster.admin_user] -> token on stdout (empty / "baduser" on failure)
 ts_token() { local ip=$1 pf=${2:-$(pwfile_for "$1")} t; t=$(secret_tmp "$pf") || return 1
-	curl -s -m 20 -G "http://$ip:$TS_PORT/api/v1/login" --data-urlencode "user=$TS_USER" --data-urlencode "pass@$t" \
+	curl -s -m 20 -G "http://$ip:$TS_PORT/api/v1/login" --data-urlencode "user=${3:-$TS_USER}" --data-urlencode "pass@$t" \
 		| python3 -I -c 'import sys,json;print(json.load(sys.stdin)["token"])' 2>/dev/null; rm -f "$t"; }
 # ts_api <ip> <GET|POST> <path> [curl args...]: adds token + user. Output = the JSON reply.
 ts_api() { local ip=$1 m=$2 p=$3 tk; shift 3; tk=$(ts_token "$ip") || return 1

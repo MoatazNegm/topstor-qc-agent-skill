@@ -19,7 +19,8 @@ for n in $(cluster_nodes "$CL"); do [ "$(node_state "$n")" = running ] || contin
 	[ -n "$(pools_on "$n")" ] && stop "a pool is imported on $n ($(pools_on "$n" | tr '\n' ' ')): export it with cluster-stopnode.sh first"; done
 if [ -n "${DRYRUN:-}" ]; then st "DRYRUN: would stop members [$(echo $MEMBERS)], clean stale LIO/loop state (container flavour), reset $P, set its address/cluster $CIP/$BITS through the API, reset+join members, set export lists to none if --no-disks (nothing touched)"; exit 0; fi
 # the branch the nodes pull on reset/join must exist in origin (the product pulls from the software repo, not from a bundle)
-BR=$(cfg get deploy.branch); [ -z "$BR" ] || "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" || stop "branch $BR is not in the node software repo: push it first (code-deploy.sh)"
+BR=$(cfg get deploy.branch); if [ -n "$BR" ]; then "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" "$CL" >> "$S/status" 2>&1; rc=$?
+	[ $rc = 0 ] || { tail -n 3 "$S/status" | grep -E 'MISSING|not reachable' | head -n 3; [ $rc = 2 ] && stop "software repo / node not reachable: branch $BR could not be checked (see status)"; stop "branch $BR is MISSING in the node software repo: push it first (code-deploy.sh)"; }; fi
 # container flavour: one shared kernel keeps old LIO targets/loops/SCSI disks alive: clean them while the primary is still up as helper
 if [ "$FL" = container ]; then st "clean stale LIO/loop state"; "$QC_TOOLS/host-stale-clean.sh" >> "$S/status" 2>&1 || stop "host-stale-clean.sh failed (see status)"; fi
 # only one node may sit on the first-boot address at a time: members down while the primary is reset
@@ -54,6 +55,8 @@ if [ $NODISKS = 1 ] && [ "$FL" = container ]; then
 	st "no test disks: export lists set to none"
 	for n in $(cluster_nodes "$CL"); do [ "$(node_state "$n")" = running ] && node_exec "$n" 'echo none > /root/loopdisks'; done
 	"$QC_TOOLS/host-kernelclean.sh" >> "$S/status" 2>&1 || st "WARN: host-kernelclean.sh after --no-disks failed"
+	for d in $(lsscsi 2>/dev/null | awk '/LIO-ORG/{print $NF}' | sed 's#/dev/##'); do    # stale SCSI disks created during the reset (the "17 instead of 12 disks" pitfall)
+		[ -e "/sys/block/$d/device/delete" ] && echo 1 > "/sys/block/$d/device/delete" && st "deleted stale LIO disk $d"; done
 fi
 V=""; for r in topstor pace topstorweb; do V="$V $r $(node_exec "$P" "cd $(cfg get repos.node_paths.$r) && echo \$(git branch --show-current) \$(git rev-parse --short HEAD)" 2>/dev/null)"; done
 st "DONE: $([ $SINGLE = 1 ] && echo 1-node || echo multi-node) cluster $CIP is up;$V"

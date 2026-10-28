@@ -43,7 +43,11 @@ suspended pools). They apply to every flavour; the container-flavour items matte
 - `tools/host-stale-clean.sh` at the start of a build (after every node was stopped): stale LIO disks and loops of earlier tests
   otherwise survive into the new cluster (a test once saw 17 instead of 12 disks).
 - Replication builds: `tools/cluster-build-repl.sh` (logs out iSCSI gracefully only while no pool is imported).
-- Not ported (write them yourself with the API calls named in the original harness): replica hot-add and disk lists, replication/group/domain/flask/balance wait loops, failover watch, SMB/NFS volume settings. Use `ts_api` from `tools/lib/tstor.sh` and `run`; keep DRYRUN.
+- Not covered by a tool (do the step with `ts_api` from `tools/lib/tstor.sh`, keep DRYRUN, and take the exact endpoint and parameters
+  from the product's own API documentation or its web UI network calls; if you cannot find them, hold the step and ask the user, never
+  guess and never fail the step for it): replica hot-add and disk lists, replication / group / domain / flask / balance wait loops
+  (poll the product's status endpoint of that feature until it reports ready; a step's own success symptom says which field), failover
+  watch (poll the leader/primary field of the cluster info until it names another node), SMB/NFS volume settings.
 - Replication setups: `tools/repl-iscsi-cross.sh` only with explicit node arguments; never for the owner of an imported pool
   (re-logging its own target suspended its pool once). The ACL is lost when the node restarts: run it again then.
 

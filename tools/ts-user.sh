@@ -13,7 +13,7 @@ add) t=$(secret_tmp "${2:?password file}") || die "password file not readable"
 	ts_api "$CIP" POST users/UnixAddUser -w ' HTTP%{http_code}' --data-urlencode "name=${1:?name}" --data-urlencode "Password@$t" --data-urlencode "groups=${3:-}" \
 		--data-urlencode Volpool=NoHome --data-urlencode Volsize=1 --data-urlencode HomeAddress=NoAddress --data-urlencode HomeSubnet=8 \
 		--data-urlencode "Myname=$TS_USER" | tr -d '\n' | cut -c1-400; echo; rm -f "$t";;
-login) tk=$(ts_token "$CIP" "${2:?password file}"); [ -n "$tk" ] && [ "$tk" != baduser ] || exit 1;;   # NOTE: ts_token logs in as cluster.admin_user: for another user set cluster.admin_user in a copy of the config
+login) tk=$(ts_token "$CIP" "${2:?password file}" "${1:?name}"); [ -n "$tk" ] && [ "$tk" != baduser ] || exit 1;;   # logs in AS the named user
 uid) node_exec "${1:?node}" "getent passwd ${2:?name}" | cut -d: -f3;;
 *) die "unknown command $C";;
 esac

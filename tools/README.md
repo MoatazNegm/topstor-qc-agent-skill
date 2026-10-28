@@ -40,7 +40,7 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `git-pr.sh` | git-pr.sh <BRANCH> [--title <t>] [--body-file <f>]   open the FINAL pull requests from YOUR repos to the upstream repos (repos.upstream, | new |
 | `agent.sh` | agent.sh <command>   registry of the fresh agents the supervisor runs (one task per agent), in state/agents/. | new |
 | `mailbox.sh` | mailbox.sh <send\|read\|wait> ...   file mailbox between the supervisor and its agents (any agent framework can use it): | mailbox.sh |
-| `supervisor-snapshot.sh` | supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted forkwatch.sh): clock, platform active test, loop | forkwatch.sh |
+| `supervisor-snapshot.sh` | supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted from the original harness watch script): clock, platform active test, loop | original watch script |
 | `secret-scan.sh` | secret-scan.sh [dir]   grep a tree (default: the skill repo, tracked + untracked files, state/ and config/input.yaml excluded) for | new |
 | `cluster-build-repl.sh` | two-cluster replication build (graceful iSCSI logout, stop, reset cluster 1 then 2, explicit cross-iSCSI); the original also recreated a third container: not portable | buildrepl.sh |
 | `ts-pool.sh` | ts-pool.sh [--cluster N] list|disks|new|del|cachespare-add   pool calls of the product API | poollib.sh, diskapi.sh |

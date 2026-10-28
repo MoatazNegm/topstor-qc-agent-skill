@@ -26,7 +26,7 @@ for n in $N1 $N2; do [ "$(node_state "$n")" = running ] || continue
 if [ -n "${DRYRUN:-}" ]; then st "DRYRUN: would log out iSCSI sessions, stop [$(echo $N1 $N2)], reset cluster 1 [$(echo $N1)] --single, reset cluster 2 [$(echo $N2)], cross-login the targets (nothing touched)"; exit 0; fi
 HOLD=; for n in $N1 $N2; do [ "$(node_state "$n")" = running ] && node_exec "$n" 'pgrep -x iscsid' >/dev/null 2>&1 && { HOLD=$n; break; }; done
 [ -z "$HOLD" ] || { st "iSCSI: graceful logout of all sessions from $HOLD (no pool is imported)"; node_exec "$HOLD" 'timeout 60 iscsiadm -m node -u' >/dev/null 2>&1; }
-for n in $N2 $N1; do [ "$(node_state "$n")" = running ] && { st "stop $n"; "$QC_TOOLS/cluster-stopnode.sh" "$n" || stop "could not stop $n"; }; done
+for n in $(for x in $N2 $N1; do [ "$x" != "$HOLD" ] && echo $x; done) $HOLD; do [ "$(node_state "$n")" = running ] && { st "stop $n"; "$QC_TOOLS/cluster-stopnode.sh" "$n" || stop "could not stop $n"; }; done   # the iscsid holder is stopped last
 st "cluster 1: reset (single)"; "$QC_TOOLS/cluster-reset.sh" "${BUILD}a" --cluster 1 --single --no-disks > "$S/c1.log" 2>&1
 tail -n1 "$QC_STATE/builds/build${BUILD}a/status" | grep -q DONE || stop "cluster 1 failed: $(tail -n1 "$QC_STATE/builds/build${BUILD}a/status")"
 st "cluster 2: reset$([ $SINGLE = 1 ] && echo ' (single)')"; "$QC_TOOLS/cluster-reset.sh" "${BUILD}b" --cluster 2 --no-disks $([ $SINGLE = 1 ] && echo --single) > "$S/c2.log" 2>&1

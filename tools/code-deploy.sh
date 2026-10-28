@@ -1,6 +1,7 @@
 #!/bin/bash
 # code-deploy.sh <BRANCH> [node...]        put the committed BRANCH of the three local clones onto the nodes.
-# code-deploy.sh --check-branch <BRANCH>   exit 0 only when BRANCH exists in the NODE SOFTWARE REPO (what a reset/join/return pulls from).
+# code-deploy.sh --check-branch <BRANCH> [cluster]   exit 0 when BRANCH exists in the NODE SOFTWARE REPO (what a reset/join/return pulls from);
+#                                          rc 1 = branch missing, rc 2 = repo or node not reachable (checked from this machine by default).
 #
 # WHY TWO METHODS. The product's nodes pull their code from a software repo ("systempull" / "csystempull", container flavour: git:// on
 # 9418). A reset, a join, a return and every setup run do "git reset --hard" to that repo's branch, so code that only sits on a node
@@ -15,12 +16,20 @@
 # code, and prove the fix live before you push to your GitHub repos.
 . "$(dirname "$(readlink -f "$0")")/lib/git.sh"
 . "$QC_TOOLS/lib/node.sh"
-if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; bad=0; any=0
+if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; CLC=${3:-1}; bad=0; unreach=0; any=0
+	# rc 0 = branch present everywhere; rc 1 = branch MISSING in a reachable repo; rc 2 = repo/node NOT REACHABLE (nothing proven either way).
+	# deploy.software_repo_check_from: local (default, run from this machine: works with every node stopped) | node (ask the running primary
+	# of the cluster; use it only when the repo URL is reachable from the nodes alone).
+	FROM=$(cfg get deploy.software_repo_check_from local)
 	for r in $REPOS; do u=$(cfg get "deploy.software_repo.$r"); [ -n "$u" ] || continue; any=1
-		o=$(node_exec "$(primary_of 1)" "timeout 30 git ls-remote --heads $u refs/heads/$BR" 2>/dev/null | grep -c "refs/heads/$BR")
-		[ "$o" -ge 1 ] || { echo "$r: branch $BR is NOT in the node software repo $u"; bad=1; }; done
+		if [ "$FROM" = node ]; then P=$(primary_of "$CLC")
+			if [ -z "$P" ] || [ "$(node_state "$P")" != running ]; then echo "$r: node not reachable: primary of cluster $CLC is not running, cannot check $u (start it, or use software_repo_check_from: local)"; unreach=1; continue; fi
+			o=$(node_exec "$P" "timeout 30 git ls-remote --heads $u refs/heads/$BR; echo RC=\$?" 2>/dev/null)
+		else o=$(timeout 30 git ls-remote --heads "$u" "refs/heads/$BR" 2>/dev/null; echo "RC=$?"); fi
+		echo "$o" | grep -q '^RC=0' || { echo "$r: node not reachable: git ls-remote of $u failed (network, URL or permission), branch $BR not checked"; unreach=1; continue; }
+		echo "$o" | grep -q "refs/heads/$BR" || { echo "$r: branch $BR is MISSING in the node software repo $u"; bad=1; }; done
 	[ $any = 1 ] || echo "WARN: deploy.software_repo.* not configured: cannot check that $BR is in the node software repo" >&2
-	exit $bad; fi
+	[ $bad = 1 ] && exit 1; [ $unreach = 1 ] && exit 2; exit 0; fi
 BR=${1:?branch}; shift; METHOD=$(cfg get deploy.method product-push)
 if [ "$METHOD" = product-push ]; then
 	PN=$(cfg get deploy.push_node local); PC=$(cfg get deploy.push_command); PL=$(cfg get deploy.pull_command)
@@ -29,7 +38,7 @@ if [ "$METHOD" = product-push ]; then
 	for r in $REPOS; do g "$r" rev-parse -q --verify "refs/heads/$BR" >/dev/null || die "$r: no local branch $BR"
 		[ -z "$(g "$r" status --porcelain)" ] || die "$r: commit first (only committed code is deployed)"; done
 	if [ "$PN" = local ]; then run bash -c "$PC" || die "push command failed"; else run node_exec "$PN" "$PC" || die "push command failed on $PN"; fi
-	[ -n "${DRYRUN:-}" ] || "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" || die "branch $BR did not arrive in the node software repo"
+	[ -n "${DRYRUN:-}" ] || "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" || die "branch $BR did not arrive in the node software repo (or the repo is not reachable: see the message above)"
 	NS=${*:-$(cluster_nodes | while read -r n; do [ "$(node_state "$n")" = running ] && echo "$n"; done)}
 	bad=0; for n in $NS; do
 		[ -z "$PL" ] || run node_exec "$n" "$PL" || { echo "$n: pull failed"; bad=1; continue; }
