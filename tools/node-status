@@ -1,0 +1,3 @@
+#!/bin/bash
+# node-status [node...]   one line per node: name type state boot-id (all nodes of the config when none is given).
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; for n in ${@:-$(cfg nodes)}; do printf "%s %s %s %s\n" "$n" "$(node_type "$n")" "$(node_state "$n" 2>/dev/null)" "$(node_bootid "$n" 2>/dev/null | cut -c1-36)"; done

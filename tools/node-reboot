@@ -1,0 +1,3 @@
+#!/bin/bash
+# node-reboot <node> [--hard]   reboot a node (docker restart / systemctl reboot / VBox reset with --hard); guarded like node-stop; waits until it answers again.
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; n=${1:?node name}; b=$(node_bootid "$n"); node_reboot "$n" "$2" || exit; node_wait_reboot "$n" "$b" "${REBOOT_TIMEOUT:-1800}"

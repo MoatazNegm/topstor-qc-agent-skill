@@ -1,0 +1,3 @@
+#!/bin/bash
+# node-copy <node> <local path> <path on node>   copy a file to a node (docker cp / scp); --from <node> <path on node> <local path> copies back.
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; if [ "$1" = --from ]; then shift; node_copy_from "${1:?node}" "${2:?remote}" "${3:?local}"; else node_copy "${1:?node}" "${2:?local}" "${3:?remote}"; fi

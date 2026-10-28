@@ -1,0 +1,3 @@
+#!/bin/bash
+# node-stop <node> [--hard]   LOW LEVEL stop (docker stop -t 120 / poweroff / ACPI). Cluster nodes are refused unless called by cluster-stopnode.sh (QC_GUARDED=1). --hard = power cut, physical/virtualbox only.
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; node_stop "${1:?node name}" "$2"

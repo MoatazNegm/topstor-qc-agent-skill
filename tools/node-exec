@@ -1,0 +1,3 @@
+#!/bin/bash
+# node-exec <node> <shell command...>   run a command on a node of any type (docker exec / ssh), no TTY; NODE_STDIN=1 passes stdin through. DRYRUN=1 prints it.
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; n=${1:?node name}; shift; [ $# -gt 0 ] || die "no command"; node_exec "$n" "$@"

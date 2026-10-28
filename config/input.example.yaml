@@ -1,0 +1,108 @@
+# input.example.yaml -- copy to config/input.yaml and fill in EVERY field marked CHANGE_ME.
+# The agent runs tools/preflight.sh first; if input.yaml is missing or incomplete it STOPS and asks you to fill it.
+#
+# SECRETS: never write a key, password or token into this file. Every secret is a FILE PATH (field name ends in
+# _file); the file holds the secret on its first line, mode 600, outside any git repo. The tools read the file
+# only at the moment of the call and never print it. A field named like a secret without "_file" is refused.
+
+platform:
+  url: https://quality-check-omega.vercel.app/api      # QualityCheck platform API base
+  app_id: CHANGE_ME                                     # your TopStor application id on the platform (X-App-Id); "" if not needed
+  tester_key_file: /root/secrets/qc-tester.key          # tester API key (qc_...), first line; used for ALL step results
+  # admin_key_file: /root/secrets/qc-admin.key          # optional; never used for results (sheet text changes only)
+
+cluster:
+  flavour: container            # container = TopStor nodes are containers on one shared kernel; physical = real servers or VMs
+  cluster_ip: 10.11.11.200      # cluster (portal) address of cluster 1
+  subnet_bits: 24
+  first_boot_ip: 10.11.11.250   # address a freshly reset TopStor node sits on before it is configured
+  discovery_ip: 10.11.11.253    # discovery etcd used during a join
+  api_port: 5001                # TopStor REST API port (http://<ip>:5001/api/v1)
+  admin_user: admin
+  admin_password_file: /root/secrets/topstor-admin.pw         # admin password the tests use on cluster 1
+  # reset_admin_password_file: /root/secrets/topstor-default.pw  # password right after docker_setup.sh reset (default: admin_password_file)
+  # second cluster (replication tests); leave empty when there is none
+  second_cluster_ip: ""
+  # second_admin_password_file: /root/secrets/topstor-admin2.pw
+  settle_seconds: 300           # real settle after EVERY node start/return and before EVERY stop
+  isinsync_timeout: 300
+
+# One entry per machine. type: container | physical | virtualbox.  role: primary | member | replication-primary |
+# replication-member | client.  cluster: 1 (main cluster) or 2 (replication peer).  host = the address the node is
+# reached with (its node IP); node-exec uses docker exec / ssh, never a TTY.
+nodes:
+  - name: node1
+    type: container
+    container: zfs1             # docker container name
+    docker_host: ""             # optional: DOCKER_HOST of a remote docker engine (e.g. ssh://root@10.0.0.5)
+    host: 10.11.11.201
+    alias: nodea
+    role: primary
+    cluster: 1
+  - name: node2
+    type: container
+    container: zfs2
+    host: 10.11.11.77
+    alias: nodeb
+    role: member
+    cluster: 1
+  # - name: srv1                # a physical server
+  #   type: physical
+  #   host: 192.168.1.21
+  #   ssh_user: root
+  #   ssh_port: 22
+  #   ssh_key_file: /root/.ssh/id_qc       # optional (else the agent's default key / ssh-agent)
+  #   start_command: ""         # optional host command that powers the server on (IPMI/wake-on-lan); without it
+  #                             # node-start asks the user to power it on and waits for ssh
+  #   role: member
+  #   cluster: 1
+  # - name: vm1                 # a VirtualBox VM
+  #   type: virtualbox
+  #   vbox_name: TopStor-node1  # name shown by VBoxManage list vms
+  #   vbox_manager_ssh: ""      # optional user@hypervisor when VBoxManage runs on another machine
+  #   host: 192.168.56.11
+  #   ssh_user: root
+  #   role: primary
+  #   cluster: 1
+  # - name: client1             # NFS/CIFS/iSCSI client used by share tests (never stopped by the cluster tools)
+  #   type: container
+  #   container: nfsclient
+  #   host: 10.11.11.231
+  #   role: client
+
+# container flavour only: the docker host that runs the node containers shares ONE kernel (ZFS, LIO, iSCSI).
+container_host:
+  test_disk_regex: '^/home/topstor/disks/(disk[456]|disk-cache2|hot[0-9]+|repl[0-9]+|tiny[0-9]+)'   # loop backing files the tests may wipe
+  stale_loop_regex: '^/home/topstor/disks/(repl|tiny)[0-9]+\.img$'  # leftover loops detached before a build
+
+repos:
+  credential_file: /root/.git-credentials   # git "store" format file with YOUR GitHub token (path only)
+  user_owner: CHANGE_ME                     # your GitHub account
+  branch_prefix: QSD5.                       # fix branches are <prefix><N>; the latest pushed one is the base
+  topstor:
+    url: https://github.com/CHANGE_ME/TopStordev.git
+    clone: /home/qc/repos/TopStor
+  pace:
+    url: https://github.com/CHANGE_ME/HC.git
+    clone: /home/qc/repos/pace
+  topstorweb:
+    url: https://github.com/CHANGE_ME/TopStorWeb.git
+    clone: /home/qc/repos/topstorweb
+  upstream:                                 # the original repos the final pull requests go to
+    topstor: moataznegm/TopStordev
+    pace: moataznegm/HC
+    topstorweb: moataznegm/TopStorWeb
+    base_branch: CHANGE_ME                  # upstream branch the pull requests target
+  node_paths:                               # where the three trees live on every node
+    topstor: /TopStor
+    pace: /pace
+    topstorweb: /topstorweb
+
+loop:
+  iteration_tests: []           # optional fixed list of test ids per iteration; empty = learn it from GET /tests
+  report_interval_minutes: 3
+  now_line_minutes: 3           # tester writes a NOW line at least this often
+  stuck_after_reports: 2        # supervisor nudges an agent after this many reports without change
+  fail_needs_user_ok: false     # true = the supervisor asks you before any validated FAIL is submitted
+
+state_dir: ./state              # rounds, ledgers, timings, agent registry (never committed)

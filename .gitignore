@@ -1,0 +1,9 @@
+# your filled-in config and everything the loop writes stay local (never committed)
+config/input.yaml
+state/
+*.key
+*.pw
+*.pem
+pw.sh
+.git-credentials
+*.bundle
