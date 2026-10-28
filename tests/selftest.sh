@@ -156,6 +156,9 @@ for bad in "x" "1.5" "0" "-1"; do QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-ad
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 2.5G >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "whole number" "$T/w.err")" 11 "ts-disk-add size '2.5G' is refused (rc 1)"
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 --wait >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "got nothing" "$T/w.err")" 11 "ts-disk-add trailing --wait without a value is refused (rc 1)"
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 >/dev/null 2>&1; ck $? 0 "ts-disk-add valid dry run still passes"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 08 09 >/dev/null 2>&1; ck $? 0 "ts-disk-add count 08 size 09 (leading zeros) is accepted as decimal"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 1 --wait 08 >/dev/null 2>&1; ck $? 0 "ts-disk-add --wait 08 (leading zero) is accepted as decimal"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 1 2 >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "too many" "$T/w.err")" 11 "ts-disk-add extra positional argument is refused (rc 1)"
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"

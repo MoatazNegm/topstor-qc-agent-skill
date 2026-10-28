@@ -8,9 +8,11 @@ WAIT=0
 [ "${*: -1}" = --wait ] && { echo "--wait needs seconds (a whole number), got nothing" >&2; exit 1; }
 if [ "$#" -ge 2 ] && [ "${*: -2:1}" = --wait ]; then WAIT=${*: -1}; set -- "${@:1:$#-2}"; fi
 case $WAIT in ""|*[!0-9]*) echo "--wait needs seconds (a whole number), got: $WAIT" >&2; exit 1;; esac
+[ "$#" -le 2 ] || { echo "too many arguments: usage ts-disk-add.sh <count> [size GB] [--wait <seconds>]" >&2; exit 1; }
 N=${1:?count}; SZ=${2:-1}
 case $N in ""|*[!0-9]*) echo "count must be a whole number, got: $N" >&2; exit 1;; esac
 case $SZ in ""|*[!0-9]*) echo "size must be a whole number of GB, got: $SZ" >&2; exit 1;; esac
+N=$((10#$N)); SZ=$((10#$SZ)); WAIT=$((10#$WAIT))   # leading zeros (08, 09) are decimal, not bad octal
 [ "$N" -ge 1 ] && [ "$SZ" -ge 1 ] || { echo "count and size must be at least 1" >&2; exit 1; }
  DD=$(cfg get container_host.disk_dir ""); LF=$(cfg get container_host.loopdisks_files ""|tr ',' ' ')
 for n in $(cluster_nodes); do [ "$(node_type "$n")" = container ] || { echo "NEEDS-HUMAN: node $n is not a container node: add the disk in the hypervisor or hardware" >&2; exit 10; }; done
