@@ -3,7 +3,7 @@
 # Never "docker kill" / "docker rm -f" a node: a kill of the owner of an imported pool suspends it and hangs the shared kernel.
 _dk() { local h; h=$(cfgn "$1" docker_host); shift; if [ -n "$h" ]; then DOCKER_HOST=$h run docker "$@"; else run docker "$@"; fi; }
 _ctr() { cfgn "$1" container; }
-t_exec() { local n=$1; shift; if [ -n "$NODE_STDIN" ]; then _dk "$n" exec -i "$(_ctr "$n")" sh -c "$*"; else _dk "$n" exec "$(_ctr "$n")" sh -c "$*" </dev/null; fi; }
+t_exec() { local n=$1; shift; if [ -n "${NODE_STDIN:-}" ]; then _dk "$n" exec -i "$(_ctr "$n")" sh -c "$*"; else _dk "$n" exec "$(_ctr "$n")" sh -c "$*" </dev/null; fi; }
 t_copy() { _dk "$1" cp "$2" "$(_ctr "$1"):$3"; }
 t_copy_from() { _dk "$1" cp "$(_ctr "$1"):$2" "$3"; }
 t_start() { _dk "$1" start "$(_ctr "$1")" >/dev/null; }

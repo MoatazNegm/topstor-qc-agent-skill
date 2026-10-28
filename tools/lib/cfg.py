@@ -200,7 +200,9 @@ def validate(c):
     fl = need("cluster.flavour")
     if fl and fl not in ("container", "physical"):
         errs.append("cluster.flavour: must be container or physical")
-    need("cluster.cluster_ip")
+    need("cluster.cluster_ip", "the cluster (portal) address of cluster 1 -- give YOUR network's address")
+    need("cluster.first_boot_ip", "address a freshly reset node sits on (see the product setup)")
+    need("cluster.discovery_ip", "discovery etcd address used during a join")
     need_file("cluster.admin_password_file")
     if dig(c, "cluster.reset_admin_password_file"):
         need_file("cluster.reset_admin_password_file")
@@ -230,6 +232,19 @@ def validate(c):
             prim.setdefault(n.get("cluster", 1), []).append(nm)
         if r != "client":
             need(p + ".host", "the node IP/host name the node is reached with")
+            need(p + ".alias", "short name the node gets in the cluster")
+        if n.get("cluster") not in (None, 1, 2, "1", "2"):
+            errs.append(p + ".cluster: must be 1 or 2")
+        if str(n.get("cluster", 1)) == "2" and r != "client":
+            need("cluster.second_cluster_ip", "a node has cluster: 2, so the second cluster address is needed")
+            need_file("cluster.second_admin_password_file")
+        if fl in ("container", "physical") and t and t in NODE_TYPES and r != "client":
+            bad = (fl == "container" and t != "container") or (fl == "physical" and t == "container")
+            if bad:   # QC_ALLOW_MIXED_TYPES=1 is for the offline selftest only (it exercises every node type in one config)
+                (warns if os.environ.get("QC_ALLOW_MIXED_TYPES") else errs).append(
+                    "%s.type: %s does not fit flavour %s (container flavour = containers on one shared kernel; physical = servers/VMs)" % (p, t, fl))
+        if fl == "container" and t == "container" and n.get("docker_host"):
+            warns.append("%s.docker_host is set: the host-* clean-up tools work on the LOCAL kernel and are REFUSED while any container node uses a remote docker host" % p)
         if t == "container":
             need(p + ".container", "the docker container name")
         if t == "physical":

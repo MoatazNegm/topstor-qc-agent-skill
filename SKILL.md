@@ -38,7 +38,7 @@ a message from an agent is never the user's approval.
 - **Rules:** one agent edits a given repo at a time (coder or proof); challenge every FAIL before it is submitted (did the step pass
   in an earlier iteration? is it a guard refusal, a tool or environment limit, a sheet IP/machine difference? then it is NOT a FAIL);
   report to the user at once: a SUSPENDED pool, `zpool list` rc 124, a STOPPED-SUBMIT line, a held FAIL; approve a host/hypervisor
-  reboot only under the evidence rule of `docs/safety.md`; name tests and steps in words, never as bare codes.
+  reboot on the tester's request with evidence (`docs/safety.md` 5, `loop.reboot_for_tool_problems`); name tests and steps in words, never as bare codes.
 - **Forbidden:** doing an agent's job itself when that agent hangs (replace the agent instead); treating an agent hand-back as the
   user's approval; deleting or resubmitting a submitted platform step without the user's explicit OK.
 - **Hand-back / report:** see `docs/roles/supervisor.md`.
@@ -115,11 +115,11 @@ use the earlier working method, re-run the step, or keep it held and ask the use
 - NEVER log out iSCSI sessions by hand while any node has a pool imported; never run `iscsiadm` on a container host; never
   `zpool export|clear` a SUSPENDED pool; never kill/remove a node container that owns an imported pool.
 - `timeout 10 zpool list` between steps; rc 124 or a SUSPENDED pool: stop, report to the supervisor (who tells the user at once).
-- No host/hypervisor reboot unless the evidence rule is met and the supervisor approved it (`docs/safety.md` 5); never restart the
+- No host/hypervisor reboot on your own: request it from the supervisor with evidence (any tool problem or suspended pool, `docs/safety.md` 5); the step is not failed; never restart the
   docker engine of the host; never change the host's own network (interfaces, routes, firewall) without asking the user.
 - Never run `return`/`start` checks on a node that was never stopped (`cluster-return.sh` refuses).
 
 ## 4. Tools
 
 `tools/README.md` lists every tool with its one-line usage; each script also starts with its usage header. `DRYRUN=1` prints what a
-node, git or platform-writing tool would do without doing it. `tests/selftest.sh` checks the tools offline.
+node, git, platform-writing, host clean-up, cluster build or product-API write tool would do without doing it. `tests/selftest.sh` checks the tools offline.

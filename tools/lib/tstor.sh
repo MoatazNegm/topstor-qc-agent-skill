@@ -11,6 +11,7 @@ ts_token() { local ip=$1 pf=${2:-$(pwfile_for "$1")} t; t=$(secret_tmp "$pf") ||
 # ts_api <ip> <GET|POST> <path> [curl args...]: adds token + user. Output = the JSON reply.
 ts_api() { local ip=$1 m=$2 p=$3 tk; shift 3; tk=$(ts_token "$ip") || return 1
 	[ -n "$tk" ] && [ "$tk" != baduser ] || { echo "no TopStor login on $ip" >&2; return 1; }
+	[ -n "${DRYRUN:-}" ] && [ "$m" != GET ] && { echo "DRYRUN: would $m $p on $ip (not sent)" >&2; echo '{}'; return 0; }
 	curl -s -m 120 -X "$m" -G "http://$ip:$TS_PORT/api/v1/$p" --data-urlencode "token=$tk" --data-urlencode "user=$TS_USER" "$@"; }
 # ts_isinsync <ip> -> value of the isinsync field (the UI's "Cluster in Sync" sign)
 ts_isinsync() { ts_api "$1" GET info/notification | python3 -I -c 'import sys,json;print(json.load(sys.stdin).get("isinsync"))' 2>/dev/null; }

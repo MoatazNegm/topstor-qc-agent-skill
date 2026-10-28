@@ -16,12 +16,12 @@ log() { echo "$(date +%T) $*"; }
 # (tokens/keys/passwords in key=value or JSON form, long hex runs, qc_/ghp_/github_pat_ tokens).
 # Extra literal words to hide (test passwords typed into steps): one per line in the file $QC_MASK_FILE (never committed).
 mask() {
-	if [ -n "$QC_MASK_FILE" ] && [ -r "$QC_MASK_FILE" ]; then
+	if [ -n "${QC_MASK_FILE:-}" ] && [ -r "${QC_MASK_FILE:-}" ]; then
 		python3 -I -c 'import sys,re
 w=[l.strip() for l in open(sys.argv[1]) if l.strip()]
 t=sys.stdin.read()
 for x in sorted(w,key=len,reverse=True): t=t.replace(x,"-")
-sys.stdout.write(t)' "$QC_MASK_FILE"
+sys.stdout.write(t)' "${QC_MASK_FILE:-}"
 	else cat; fi | sed -E 's/("?(token|password|passwd|pass|pw|key|apikey|api_key|secret)"? ?[:=] ?"?)[^"&[:space:],}]+/\1-/gI;
 	        s/(qc|ghp|gho|ghs|github_pat)_[A-Za-z0-9_]{8,}/\1_-/g;
 	        s/[0-9a-fA-F]{32,}/-/g'
@@ -34,7 +34,7 @@ secret_tmp() {
 }
 
 # run: execute, or print to stderr when DRYRUN=1
-run() { if [ -n "$DRYRUN" ]; then echo "DRYRUN: $*" >&2; else "$@"; fi; }
+run() { if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: $*" >&2; else "$@"; fi; }
 
 # round_dir <round> -> absolute dir of a round under state/rounds
 round_dir() { echo "$QC_STATE/rounds/${1:?round name}"; }

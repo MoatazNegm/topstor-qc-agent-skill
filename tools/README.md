@@ -1,6 +1,6 @@
 # Tools
 
-Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `state/`. Each starts with a usage header (`sed -n 2,4p <tool>`). `DRYRUN=1` prints node, git and platform-writing commands instead of running them.
+Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `state/`. Each starts with a usage header (`sed -n 2,4p <tool>`). `DRYRUN=1` prints node, git, platform-writing, host clean-up, cluster build and product-API write commands instead of running them (read calls still run).
 
 | Tool | Usage (first header line) | Adapted from (TopStor dev harness) |
 |---|---|---|
@@ -42,5 +42,14 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `mailbox.sh` | mailbox.sh <send\|read\|wait> ...   file mailbox between the supervisor and its agents (any agent framework can use it): | mailbox.sh |
 | `supervisor-snapshot.sh` | supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted forkwatch.sh): clock, platform active test, loop | forkwatch.sh |
 | `secret-scan.sh` | secret-scan.sh [dir]   grep a tree (default: the skill repo, tracked + untracked files, state/ and config/input.yaml excluded) for | new |
+| `cluster-build-repl.sh` | two-cluster replication build (graceful iSCSI logout, stop, reset cluster 1 then 2, explicit cross-iSCSI); the original also recreated a third container: not portable | buildrepl.sh |
+| `ts-pool.sh` | ts-pool.sh [--cluster N] list|disks|new|del|cachespare-add   pool calls of the product API | poollib.sh, diskapi.sh |
+| `ts-volume.sh` | ts-volume.sh [--cluster N] list|create-cifs|del   CIFS/HOME volume calls | vollib.sh |
+| `ts-user.sh` | ts-user.sh [--cluster N] list|add|login|uid   user calls (password from a file) | userlib.sh |
+| `ts-disk-add.sh` | ts-disk-add.sh <count> [GB]   add test loop disks (container flavour; others NEEDS-HUMAN rc 10) | hotadd.sh |
+| `ts-disk-remove.sh` | ts-disk-remove.sh <loopN>   detach one test loop disk (container flavour) | hotadd.sh |
+| `cluster-wait-takeover.sh` | cluster-wait-takeover.sh <survivor> [max s]   poll portal login after a stop, then print users, volumes, pools | waittakeover.sh |
+| `client-mount-check.sh` | client-mount-check.sh   stat-probe NFS/CIFS mounts on client nodes, rc 1 on a stale one | new (stale mount check) |
+| `qc-local.sh` | qc-local.sh <test> list|<step> pass|fail [text]   local re-run record, never submits | qclocal.sh |
 
 Libraries (sourced, not run): `lib/common.sh` (config, state dir, `mask`, `secret_tmp`, `run`), `lib/cfg.py` (YAML subset reader + validator), `lib/node.sh` + `lib/nodetype/{container,physical,virtualbox,ssh}.sh` (node abstraction), `lib/tstor.sh` (TopStor API: login from a password file, isinsync, etcd reads, pools), `lib/qc.sh` (platform calls with the key from its file), `lib/git.sh` (git and GitHub API with the credential file).

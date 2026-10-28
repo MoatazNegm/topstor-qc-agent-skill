@@ -18,12 +18,12 @@ LED=$QC_STATE/ledger/$R.sent
 grep -qx "$T:$S" "$LED" 2>/dev/null && stop 3 "ledger: already submitted in round $R -- never submitted twice"
 if [ "$RES" = fail ]; then
 	[ "$MODE" = --config ] || stop 4 "a FAIL needs --config (configuration files of all nodes attached)"
-	[ -n "$QC_FAIL_VERDICT" ] && grep -q 'VERDICT: REAL_APP_BUG' "$QC_FAIL_VERDICT" 2>/dev/null || stop 4 "FAIL held: no validator verdict REAL_APP_BUG (QC_FAIL_VERDICT); tool, environment, guard refusal or sheet differences are never a FAIL"
+	[ -n "${QC_FAIL_VERDICT:-}" ] && grep -q 'VERDICT: REAL_APP_BUG' "$QC_FAIL_VERDICT" 2>/dev/null || stop 4 "FAIL held: no validator verdict REAL_APP_BUG (QC_FAIL_VERDICT); tool, environment, guard refusal or sheet differences are never a FAIL"
 fi
 W=$(mktemp -d "$QC_STATE/tmp/sub.XXXXXX"); trap 'rm -rf "$W"' EXIT
 mask < "$CF" | cut -c1-6000 > "$W/comment"
 [ -s "$W/comment" ] || stop 4 "empty comment: every result needs evidence (command/API call and what came back)"
-if [ -n "$DRYRUN" ]; then echo "DRYRUN: would submit test $T step $S $RES ${MODE} comment: $(head -c 200 "$W/comment")"; exit 0; fi
+if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: would submit test $T step $S $RES ${MODE} comment: $(head -c 200 "$W/comment")"; exit 0; fi
 ok=0; for i in 1 2 3 4 5 6; do o=$(qc_code tests/active); c=${o% *}; t=${o#* }; [ "$c" = 200 ] && [ "${t%.*}" -lt 5 ] && { ok=1; break; }
 	log "platform GET slow/err before submit: http $c ${t}s (try $i)" >> "$L"; sleep 30; done
 [ $ok = 1 ] || stop 6 "platform unhealthy for 3 minutes; nothing was sent"

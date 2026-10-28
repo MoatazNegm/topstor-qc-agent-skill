@@ -12,6 +12,7 @@ try:
     print("platform active test: %s %s (%d steps)"%(d["id"],d["name"],len(d.get("steps",[]))) if d else "platform active test: none")
 except Exception: print("platform active test: platform did not answer")'
 echo "loop: $("$QC_TOOLS/loop-state.sh" show)"
+echo "rules: fail_needs_user_ok=$(cfg get loop.fail_needs_user_ok false) reboot_for_tool_problems=$(cfg get loop.reboot_for_tool_problems true)"
 now=$(date +%s)
 "$QC_TOOLS/agent.sh" list | while read -r id role state age rest; do a=${age#age=}; a=${a%s}
 	flag=""; [ "$state" = running ] && [ "${a:-0}" -gt "$LIM" ] && flag=" STUCK (no status for ${a}s > ${LIM}s: nudge it)"

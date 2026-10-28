@@ -13,10 +13,10 @@ platform:
 
 cluster:
   flavour: container            # container = TopStor nodes are containers on one shared kernel; physical = real servers or VMs
-  cluster_ip: 10.11.11.200      # cluster (portal) address of cluster 1
+  cluster_ip: CHANGE_ME         # cluster (portal) address of cluster 1 (YOUR network, e.g. 192.168.10.200)
   subnet_bits: 24
-  first_boot_ip: 10.11.11.250   # address a freshly reset TopStor node sits on before it is configured
-  discovery_ip: 10.11.11.253    # discovery etcd used during a join
+  first_boot_ip: CHANGE_ME      # address a freshly reset TopStor node sits on before it is configured (product default 10.11.11.250 on the dev setup)
+  discovery_ip: CHANGE_ME       # discovery etcd address used during a join (product default 10.11.11.253 on the dev setup)
   api_port: 5001                # TopStor REST API port (http://<ip>:5001/api/v1)
   admin_user: admin
   admin_password_file: /root/secrets/topstor-admin.pw         # admin password the tests use on cluster 1
@@ -24,6 +24,7 @@ cluster:
   # second cluster (replication tests); leave empty when there is none
   second_cluster_ip: ""
   # second_admin_password_file: /root/secrets/topstor-admin2.pw
+  # to give the example above no meaning: nothing in the tools has a built-in address; every address comes from this file
   settle_seconds: 300           # real settle after EVERY node start/return and before EVERY stop
   isinsync_timeout: 300
 
@@ -33,17 +34,17 @@ cluster:
 nodes:
   - name: node1
     type: container
-    container: zfs1             # docker container name
+    container: CHANGE_ME        # docker container name of this node
     docker_host: ""             # optional: DOCKER_HOST of a remote docker engine (e.g. ssh://root@10.0.0.5)
-    host: 10.11.11.201
-    alias: nodea
+    host: CHANGE_ME             # this node's IP (the address the node is reached with)
+    alias: CHANGE_ME            # short name the node gets in the cluster (a-z0-9)
     role: primary
     cluster: 1
   - name: node2
     type: container
-    container: zfs2
-    host: 10.11.11.77
-    alias: nodeb
+    container: CHANGE_ME
+    host: CHANGE_ME
+    alias: CHANGE_ME
     role: member
     cluster: 1
   # - name: srv1                # a physical server
@@ -66,14 +67,19 @@ nodes:
   #   cluster: 1
   # - name: client1             # NFS/CIFS/iSCSI client used by share tests (never stopped by the cluster tools)
   #   type: container
-  #   container: nfsclient
-  #   host: 10.11.11.231
+  #   container: CHANGE_ME
+  #   host: CHANGE_ME
   #   role: client
 
 # container flavour only: the docker host that runs the node containers shares ONE kernel (ZFS, LIO, iSCSI).
 container_host:
   test_disk_regex: '^/home/topstor/disks/(disk[456]|disk-cache2|hot[0-9]+|repl[0-9]+|tiny[0-9]+)'   # loop backing files the tests may wipe
   stale_loop_regex: '^/home/topstor/disks/(repl|tiny)[0-9]+\.img$'  # leftover loops detached before a build
+  # Host-side path of each container node's /root/loopdisks (the disk export list), as seen from the docker host (bind mount of the
+  # container's /root). host-stale-clean.sh writes "none" to them even while the nodes are STOPPED (the build starts from stopped nodes).
+  # Without an entry the list is only set on running nodes. Example: [/srv/node1/root/loopdisks, /srv/node2/root/loopdisks]
+  loopdisks_files: []
+  disk_dir: ""   # folder for the backing files of ts-disk-add.sh (container flavour)
 
 repos:
   credential_file: /root/.git-credentials   # git "store" format file with YOUR GitHub token (path only)
@@ -98,11 +104,28 @@ repos:
     pace: /pace
     topstorweb: /topstorweb
 
+deploy:                         # how a fix reaches the nodes (tools/code-deploy.sh)
+  method: product-push          # product-push = push the branch into the node software repo with the product's own systempush (the
+                                # next reset/join/return pulls from there); bundle = quick test only, wiped by the next reset/join
+  push_node: local              # where push_command runs: a node name, or "local" (this machine, which has the clones)
+  push_command: 'SPD_ROOT=/home/qc/repos /TopStor/systempush.sh {branch}'   # CHANGE_ME: the product's push into the software repo
+  pull_command: ''              # optional, run on every node after the push, e.g. '/TopStor/csystempull.sh {branch}'
+  branch: ''                    # the branch under test; when set, cluster-reset.sh refuses to run if it is not in the software repo
+  software_repo:                # git URLs of the node software repo (as the NODES see them), used to check the branch is there
+    topstor: ''                 # e.g. git://CHANGE_ME:9418/TopStor
+    pace: ''
+    topstorweb: ''
+
 loop:
   iteration_tests: []           # optional fixed list of test ids per iteration; empty = learn it from GET /tests
   report_interval_minutes: 3
   now_line_minutes: 3           # tester writes a NOW line at least this often
   stuck_after_reports: 2        # supervisor nudges an agent after this many reports without change
-  fail_needs_user_ok: false     # true = the supervisor asks you before any validated FAIL is submitted
+  fail_needs_user_ok: false     # false = a validated FAIL (real app bug, validator verdict file) is submitted by the agents themselves.
+                                # true  = strict stop rule of the original QC fork: STOP and ask the user before ANY FAIL is submitted.
+                                # The value is printed in every supervisor snapshot. Pick one on purpose.
+  reboot_for_tool_problems: true  # true = a host/hypervisor reboot may be requested for ANY tool problem or suspended/hung pool (with evidence
+                                # in the log, after every other agent saved its state; never a container-engine restart, never sync).
+                                # false = only for a suspended pool / hung kernel (evidence rule of docs/safety.md 5).
 
 state_dir: ./state              # rounds, ledgers, timings, agent registry (never committed)

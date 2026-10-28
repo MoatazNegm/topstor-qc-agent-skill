@@ -5,9 +5,10 @@
 . "$(dirname "$(readlink -f "$0")")/lib/tstor.sh"
 M=${1:?member node}; AL=${2:-$(cfgn "$M" alias "node$RANDOM")}
 CL=$(cfgn "$M" cluster 1); P=$(primary_of "$CL"); CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip)
-DIP=$(cfg get cluster.discovery_ip 10.11.11.253); BITS=$(cfg get cluster.subnet_bits 24); MIP=$(cfgn "$M" host)
+DIP=$(cfg get cluster.discovery_ip); BITS=$(cfg get cluster.subnet_bits 24); MIP=$(cfgn "$M" host)
 FAILS=0; ok() { log "  PASS $*"; }; bad() { log "  FAIL $*"; FAILS=$((FAILS+1)); }; fail() { bad "$*"; log "JOIN FAILED"; exit 1; }
 [ -n "$P" ] || fail "cluster $CL has no primary in the config"
+[ -n "${DRYRUN:-}" ] && { log "DRYRUN: would wait for a login on $CIP, wait for $M in discovery $DIP, POST hosts/joincluster (alias $AL, ip $MIP), wait for the restart and verify (nothing sent)"; exit 0; }
 T=; for i in $(seq 1 120); do T=$(ts_token "$CIP"); [ -n "$T" ] && [ "$T" != baduser ] && break; sleep 5; done
 [ -n "$T" ] && [ "$T" != baduser ] || fail "no login on $CIP after 600 s"
 # a node that is still starting answers docker exec with an error text: wait for a real first-boot name (dhcpNNN)

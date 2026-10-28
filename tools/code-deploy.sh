@@ -1,12 +1,44 @@
 #!/bin/bash
-# code-deploy.sh <BRANCH> [node...]   put the committed BRANCH of the three local clones onto the nodes (default: every running cluster
-# node) without giving the nodes any credential: a git bundle per repo is copied with node-copy, fetched and checked out
-# (checkout -f + reset --hard; uncommitted edits on a node are wiped anyway by the product's own setup). Then the commit on every
-# node is compared with the clone and cluster-refreshcversion.sh re-publishes the version. Restart/settle the nodes afterwards
-# so the running processes load the code; prove the fix live before you push.
+# code-deploy.sh <BRANCH> [node...]        put the committed BRANCH of the three local clones onto the nodes.
+# code-deploy.sh --check-branch <BRANCH>   exit 0 only when BRANCH exists in the NODE SOFTWARE REPO (what a reset/join/return pulls from).
+#
+# WHY TWO METHODS. The product's nodes pull their code from a software repo ("systempull" / "csystempull", container flavour: git:// on
+# 9418). A reset, a join, a return and every setup run do "git reset --hard" to that repo's branch, so code that only sits on a node
+# is WIPED by the next of those. The original QC harness therefore pushes the branch into that software repo with the product's own
+# systempush ("SPD_ROOT=<tree> systempush.sh <BRANCH>").
+#   deploy.method: product-push (default)  run deploy.push_command on deploy.push_node (a node, or "local" = this machine); the string
+#                    {branch} is replaced. Example: "/TopStor/systempush.sh {branch}". Then each node is told to pull
+#                    (deploy.pull_command, example "/TopStor/systempull.sh {branch}") and the commit is compared with the clone.
+#   deploy.method: bundle                  no software repo: a git bundle per repo is copied to the node and checked out. QUICK TEST
+#                    ONLY: the next reset/join/return/setup wipes it, so use it only on a running cluster that will not be reset.
+# After either method cluster-refreshcversion.sh re-publishes the version; restart/settle the nodes so the running processes load the
+# code, and prove the fix live before you push to your GitHub repos.
 . "$(dirname "$(readlink -f "$0")")/lib/git.sh"
 . "$QC_TOOLS/lib/node.sh"
-BR=${1:?branch}; shift; NS=${*:-$(cluster_nodes | while read -r n; do [ "$(node_state "$n")" = running ] && echo "$n"; done)}
+if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; bad=0; any=0
+	for r in $REPOS; do u=$(cfg get "deploy.software_repo.$r"); [ -n "$u" ] || continue; any=1
+		o=$(node_exec "$(primary_of 1)" "timeout 30 git ls-remote --heads $u refs/heads/$BR" 2>/dev/null | grep -c "refs/heads/$BR")
+		[ "$o" -ge 1 ] || { echo "$r: branch $BR is NOT in the node software repo $u"; bad=1; }; done
+	[ $any = 1 ] || echo "WARN: deploy.software_repo.* not configured: cannot check that $BR is in the node software repo" >&2
+	exit $bad; fi
+BR=${1:?branch}; shift; METHOD=$(cfg get deploy.method product-push)
+if [ "$METHOD" = product-push ]; then
+	PN=$(cfg get deploy.push_node local); PC=$(cfg get deploy.push_command); PL=$(cfg get deploy.pull_command)
+	[ -n "$PC" ] || die "deploy.push_command is not set (see config/input.example.yaml); or set deploy.method: bundle for a quick test"
+	PC=${PC//\{branch\}/$BR}; PL=${PL//\{branch\}/$BR}
+	for r in $REPOS; do g "$r" rev-parse -q --verify "refs/heads/$BR" >/dev/null || die "$r: no local branch $BR"
+		[ -z "$(g "$r" status --porcelain)" ] || die "$r: commit first (only committed code is deployed)"; done
+	if [ "$PN" = local ]; then run bash -c "$PC" || die "push command failed"; else run node_exec "$PN" "$PC" || die "push command failed on $PN"; fi
+	[ -n "${DRYRUN:-}" ] || "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" || die "branch $BR did not arrive in the node software repo"
+	NS=${*:-$(cluster_nodes | while read -r n; do [ "$(node_state "$n")" = running ] && echo "$n"; done)}
+	bad=0; for n in $NS; do
+		[ -z "$PL" ] || run node_exec "$n" "$PL" || { echo "$n: pull failed"; bad=1; continue; }
+		for r in $REPOS; do p=$(cfg get "repos.node_paths.$r"); want=$(g "$r" rev-parse "refs/heads/$BR")
+			got=$(node_exec "$n" "cd $p && git rev-parse HEAD" 2>/dev/null | tr -d '\r\n')
+			[ -n "${DRYRUN:-}" ] || { [ "$got" = "$want" ] && echo "$n $r: $BR ${got:0:8} deployed" || { echo "$n $r: MISMATCH node=${got:0:8} clone=${want:0:8}"; bad=1; }; }; done; done
+	run "$QC_TOOLS/cluster-refreshcversion.sh" $NS; exit $bad; fi
+echo "WARN: deploy.method=bundle: a reset/join/return/setup on a node pulls from the software repo and WIPES this deployment" >&2
+NS=${*:-$(cluster_nodes | while read -r n; do [ "$(node_state "$n")" = running ] && echo "$n"; done)}
 W=$(mktemp -d "$QC_STATE/tmp/dep.XXXXXX"); trap 'rm -rf "$W"' EXIT; bad=0
 for r in $REPOS; do g "$r" rev-parse -q --verify "refs/heads/$BR" >/dev/null || die "$r: no local branch $BR"
 	[ -z "$(g "$r" status --porcelain)" ] || die "$r: commit first (only committed code is deployed)"
@@ -15,7 +47,7 @@ for n in $NS; do for r in $REPOS; do p=$(cfg get "repos.node_paths.$r"); want=$(
 	node_copy "$n" "$W/$r.bundle" "/tmp/qc-$r.bundle" || { echo "$n $r: copy failed"; bad=1; continue; }
 	node_exec "$n" "cd $p && git fetch -q -f /tmp/qc-$r.bundle +refs/heads/$BR:refs/qc/$BR && git checkout -q -f -B $BR refs/qc/$BR && git reset -q --hard refs/qc/$BR; rm -f /tmp/qc-$r.bundle" || { echo "$n $r: checkout failed"; bad=1; continue; }
 	got=$(node_exec "$n" "cd $p && git rev-parse HEAD" 2>/dev/null | tr -d '\r\n')
-	[ -n "$DRYRUN" ] || { [ "$got" = "$want" ] && echo "$n $r: $BR ${got:0:8} deployed" || { echo "$n $r: MISMATCH node=${got:0:8} clone=${want:0:8}"; bad=1; }; }
+	[ -n "${DRYRUN:-}" ] || { [ "$got" = "$want" ] && echo "$n $r: $BR ${got:0:8} deployed" || { echo "$n $r: MISMATCH node=${got:0:8} clone=${want:0:8}"; bad=1; }; }
 done; done
 "$QC_TOOLS/cluster-refreshcversion.sh" $NS
 exit $bad

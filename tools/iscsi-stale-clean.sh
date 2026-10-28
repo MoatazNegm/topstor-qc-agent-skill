@@ -3,7 +3,10 @@
 # current node of this cluster: logins to them stall the product's discovery/disk refresh for minutes (adapted cleaniscsistale.sh).
 # Only records of foreign targets are touched; run it between builds, never while a pool uses a session of those targets.
 . "$(dirname "$(readlink -f "$0")")/lib/node.sh"
+. "$QC_TOOLS/lib/tstor.sh"
 NS=${@:-$(cluster_nodes)}; names=""
+# enforced guard: never while a pool is imported (a stale-looking record may be the session a pool is running on)
+for c in $NS; do [ "$(node_state "$c")" = running ] || continue; [ -z "$(pools_on "$c")" ] || die "REFUSED: pool(s) imported ($(pools_on "$c" | tr '\n' ' ')): run this between builds, with no pool imported"; done
 for c in $NS; do h=$(node_exec "$c" hostname 2>/dev/null | tr -d '\r\n'); [ -n "$h" ] && names="$names iqn.2016-03.com.$h:t1"; done
 c1=$(echo $NS | cut -d' ' -f1)
 if [ "$(cfg get cluster.flavour)" = container ]; then

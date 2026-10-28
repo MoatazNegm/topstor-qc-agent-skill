@@ -15,10 +15,10 @@ with a DONE line, then stop.
 3. Read ALL steps (`state/rounds/$R/steps.txt`). Plan which nodes, clusters, disks and clients the test needs and the stop order
    (iSCSI initiator holder last).
 4. Stop every cluster node with `tools/cluster-stopnode.sh` (`FORCE_DEGRADED=1` only for a leftover degraded pool). Container
-   flavour: `tools/host-stale-clean.sh`; check the client containers have no stale NFS/CIFS mounts.
-5. Build: `tools/cluster-reset.sh <build> [--single] [--no-disks]` (replication: both clusters, `--cluster 2` for the second);
+   flavour: `tools/host-stale-clean.sh`; `tools/client-mount-check.sh` (rc 1 = stale NFS/CIFS mount in a client: clean it first).
+5. Build: `tools/cluster-reset.sh <build> [--single] [--no-disks]` (replication: `tools/cluster-build-repl.sh <build>` builds both clusters; it cannot recreate a third container, see its header);
    `tools/cluster-refreshcversion.sh`. `tools/qc-start.sh <test>`.
-6. Per step: do it with the node wrappers and the TopStor API; `tools/cluster-settle.sh` after every start/return and before every
+6. Per step: do it with the node wrappers and the TopStor API (`tools/ts-pool.sh`, `ts-volume.sh`, `ts-user.sh`, `ts-disk-add.sh`, `cluster-wait-takeover.sh`; a local re-run is recorded with `tools/qc-local.sh`, never submitted); `tools/cluster-settle.sh` after every start/return and before every
    stop; evidence from real output; write the comment to a file; `tools/qc-submit.sh $R <test> <step id> pass <file> [--config]`.
    The step "upload the config files of all the nodes" and every FAIL use `--config`.
 7. A step you cannot pass: `tools/log.sh $R HOLD "<step in words>: <what happened>"`, update RESUME.md, message the supervisor
@@ -38,12 +38,12 @@ with a DONE line, then stop.
   easy to undo), write the question and the answer into the comment or the DONE line.
 - Every tool you write or change for this skill goes into `tools/` with a usage header (and the skill repo), never into the
   product repos.
-- Hung pool / tool problem with evidence (SUSPENDED, `txg_sync` in D state, `zpool list` rc 124): ask the supervisor for the
-  reboot (`docs/safety.md` 5), then resume; the step is not failed.
+- Tool problem or hung pool, with evidence logged in `run.log` (failing command and output, SUSPENDED, `txg_sync` in D state, `zpool
+  list` rc 124): ask the supervisor for the reboot (`docs/safety.md` 5; no engine restart, no `sync`), then resume; the step is not failed.
 
 ## Forbidden
 Bare `node-stop` of a cluster node; host `iscsiadm`; manual iSCSI logouts with a pool imported; `zpool export|clear` of a
-SUSPENDED pool; recreating a working node; a host reboot or a docker engine restart on your own; tokens or passwords in comments;
+SUSPENDED pool; recreating a working node; a host reboot without the supervisor's approval, a docker engine restart, `sync`; tokens or passwords in comments;
 committing state/ files.
 
 ## Hand-back

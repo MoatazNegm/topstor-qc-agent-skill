@@ -73,6 +73,10 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
   three must agree). The first step's comment names the branch and short commit of each repo on the nodes.
 - A fix goes on a NEW branch `<prefix><N+1>` made from the latest pushed branch (`tools/git-newbranch.sh`), in all three repos at
   once (they carry the same branch name). Never edit a branch that is already pushed.
+- Deploy (`tools/code-deploy.sh <branch>`) puts the branch into the NODE SOFTWARE REPO with the product's own push
+  (`deploy.method: product-push`), because every reset, join, return and setup pulls from that repo and wipes anything that only
+  sits on a node. `deploy.method: bundle` is a quick test on a cluster that will not be reset. `tools/cluster-reset.sh` refuses when
+  `deploy.branch` is not in the software repo.
 - Push (`tools/git-pushbranch.sh`) only for a product change, only after the whole test passed locally. Tool changes of this skill
   are committed to this skill repo, never to the product repos.
 - The product's setup (`docker_setup.sh`) runs `git reset --hard` in the node trees: everything must be committed before a node is

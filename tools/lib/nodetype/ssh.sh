@@ -4,7 +4,7 @@ _sshopts() { local n=$1 k p; k=$(cfgn "$n" ssh_key_file); p=$(cfgn "$n" ssh_port
 	echo "-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o StrictHostKeyChecking=accept-new -p $p ${k:+-i $k}"; }
 _sshdst() { echo "$(cfgn "$1" ssh_user)@$(cfgn "$1" host)"; }
 _ssh() { local n=$1; shift; run ssh $(_sshopts "$n") -T "$(_sshdst "$n")" "$@"; }
-t_exec() { local n=$1; shift; if [ -n "$NODE_STDIN" ]; then _ssh "$n" "$*"; else _ssh "$n" "$*" </dev/null; fi; }
+t_exec() { local n=$1; shift; if [ -n "${NODE_STDIN:-}" ]; then _ssh "$n" "$*"; else _ssh "$n" "$*" </dev/null; fi; }
 t_copy() { local n=$1 o; o=$(_sshopts "$n" | sed 's/-p /-P /'); run scp $o "$2" "$(_sshdst "$n"):$3"; }
 t_copy_from() { local n=$1 o; o=$(_sshopts "$n" | sed 's/-p /-P /'); run scp $o "$(_sshdst "$n"):$2" "$3"; }
 t_bootid() { DRYRUN= _ssh "$1" cat /proc/sys/kernel/random/boot_id 2>/dev/null </dev/null; }

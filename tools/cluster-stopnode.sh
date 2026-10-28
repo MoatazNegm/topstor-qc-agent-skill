@@ -24,7 +24,7 @@ fi
 if [ $EXPORT = 1 ]; then
 	for p in $MINE; do
 		st=$(pool_state "$N" "$p")
-		[ "$st" = ONLINE ] || { [ "$st" = DEGRADED ] && [ -n "$FORCE_DEGRADED" ]; } || { say "pool $p is '$st' -- not touched, node NOT stopped (never export/clear a SUSPENDED pool)"; exit 2; }
+		[ "$st" = ONLINE ] || { [ "$st" = DEGRADED ] && [ -n "${FORCE_DEGRADED:-}" ]; } || { say "pool $p is '$st' -- not touched, node NOT stopped (never export/clear a SUSPENDED pool)"; exit 2; }
 		ok=0
 		for try in 1 2 3; do
 			names=$(node_exec "$N" "for c in \$(docker ps --format '{{.Names}}'); do docker inspect -f '{{range .Mounts}}{{.Source}} {{end}}' \$c 2>/dev/null | grep -q '/$p' && echo \$c; done" 2>/dev/null | tr '\n' ' ')

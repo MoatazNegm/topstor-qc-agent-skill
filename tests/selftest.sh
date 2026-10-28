@@ -15,6 +15,8 @@ platform:
 cluster:
   flavour: container
   cluster_ip: 10.0.0.200
+  first_boot_ip: 10.0.0.250
+  discovery_ip: 10.0.0.253
   admin_password_file: $T/pw
   settle_seconds: 1
 nodes:
@@ -22,11 +24,13 @@ nodes:
     type: container
     container: selftest-ctr-a
     host: 10.0.0.201
+    alias: a1
     role: primary
     cluster: 1
   - name: n2
     type: physical
     host: 10.0.0.77
+    alias: a2
     ssh_user: root
     ssh_key_file: $T/sshkey
     role: member
@@ -34,6 +38,7 @@ nodes:
     type: virtualbox
     vbox_name: "TopStor node3"
     host: 10.0.0.78
+    alias: a3
     ssh_user: root
     role: member
   - name: c1
@@ -64,9 +69,12 @@ loop:
   iteration_tests: [10, 11]
 state_dir: $T/state
 EOF
-export QC_CONFIG=$T/input.yaml
+export QC_CONFIG=$T/input.yaml QC_ALLOW_MIXED_TYPES=1
 TL=$ROOT/tools
 python3 -I "$TL/lib/cfg.py" validate > "$T/v.out" 2>&1; ck $? 0 "complete config validates"
+QC_ALLOW_MIXED_TYPES= python3 -I "$TL/lib/cfg.py" validate 2>&1 | grep -q 'does not fit flavour'; ck $? 0 "flavour/type mismatch is an error"
+sed 's#^  cluster_ip: .*#  cluster_ip: CHANGE_ME#; s#^  first_boot_ip: .*#  first_boot_ip: CHANGE_ME#' "$T/input.yaml" > "$T/nofb.yaml"
+QC_CONFIG=$T/nofb.yaml python3 -I "$TL/lib/cfg.py" validate 2>&1 | grep -q 'first_boot_ip'; ck $? 0 "cluster and first-boot address must be given by the user"
 ck "$(python3 -I "$TL/lib/cfg.py" get loop.iteration_tests)" "10 11" "inline list parsed"
 ck "$(python3 -I "$TL/lib/cfg.py" node n3 vbox_name)" "TopStor node3" "quoted scalar parsed"
 ck "$(python3 -I "$TL/lib/cfg.py" get repos.topstor.url)" "https://example.invalid/a.git" "inline map parsed"
@@ -84,18 +92,27 @@ o=$(DRYRUN=1 "$TL/node-start" n3 2>&1); case "$o" in *"VBoxManage startvm TopSto
 QC_GUARDED=1 "$TL/node-stop" n1 --hard > /dev/null 2>&1; ck $? 5 "hard stop of a container node refused"
 o=$(DRYRUN=1 "$TL/node-stop" c1 2>&1); ck "$o" "DRYRUN: docker stop -t 120 selftest-ctr-c" "client stop allowed"
 "$TL/repl-iscsi-cross.sh" > /dev/null 2>&1; ck $? 1 "repl-iscsi-cross needs explicit nodes"
-"$TL/loop-state.sh" set-tests 10 11 >/dev/null; "$TL/loop-state.sh" test-done 10 pass >/dev/null
-"$TL/loop-state.sh" code-change QSD5.2 "fix" >/dev/null; "$TL/loop-state.sh" test-done 11 pass >/dev/null
-"$TL/loop-state.sh" is-clean >/dev/null; ck $? 1 "not clean after a code change"
-"$TL/loop-state.sh" test-done 10 pass >/dev/null; "$TL/loop-state.sh" is-clean >/dev/null; ck $? 0 "clean after every test passed since the change"
+LS="$TL/loop-state.sh"; $LS set-tests 10 11 >/dev/null; $LS test-done 10 pass >/dev/null
+$LS code-change QSD5.2 "fix" >/dev/null; $LS test-done 11 pass >/dev/null
+$LS is-clean >/dev/null; ck $? 1 "not clean: a code change mid-iteration needs a whole new iteration"
+$LS test-done 10 pass >/dev/null; $LS is-clean >/dev/null; ck $? 0 "clean after one full iteration from the first test with no change"
+$LS code-change QSD5.3 "fix 2" >/dev/null; $LS is-clean >/dev/null; ck $? 1 "a code change voids an earlier clean iteration"
+$LS test-done 10 fail >/dev/null; $LS test-done 10 pass >/dev/null; $LS test-done 11 pass >/dev/null; $LS is-clean >/dev/null; ck $? 1 "not clean: test failed without code change, later passed"
+$LS test-done 10 pass >/dev/null; $LS test-done 11 pass >/dev/null; $LS is-clean >/dev/null; ck $? 0 "clean again after the next full clean iteration"
 "$TL/git-pr.sh" X > /dev/null 2>&1 <<< "" ; true
 FAKEPW=s3cret$RANDOM; FAKEKEY=qc_$(printf 'Z%.0s' $(seq 1 20)); FAKEHEX=$(printf '0f%.0s' $(seq 1 20))
 o=$(echo "login?user=admin&pass=$FAKEPW&token=abcd x $FAKEKEY $FAKEHEX" | (. "$TL/lib/common.sh"; mask))
-case "$o" in *"$FAKEPW"*|*abcd\ *|*ZZZZZZZZ*|*0f0f0f0f0f0f0f0f*) r="$o";; *) r=ok;; esac; ck "$r" ok "mask hides password, token, key, hex"
-R=$("$TL/round-new.sh" 10 1 2>/dev/null) ; mkdir -p "$T/state/rounds/b10i1"; echo x > "$T/c"
+ck "$o" "login?user=admin&pass=-&token=- x qc_- -" "mask output is exactly the masked text (under set -u)"
+mkdir -p "$T/state/rounds/b10i1"; echo x > "$T/c"
 "$TL/qc-submit.sh" b10i1 10 1 fail "$T/c" --config > /dev/null 2>&1; ck $? 4 "FAIL without validator verdict held"
 "$TL/qc-submit.sh" b10i1 10 1 fail "$T/c" > /dev/null 2>&1; ck $? 4 "FAIL without config refused"
 echo "10:5" > "$T/state/ledger/b10i1.sent"; "$TL/qc-submit.sh" b10i1 10 5 pass "$T/c" > /dev/null 2>&1; ck $? 3 "second submission of a step refused (ledger)"
+# DRYRUN must not touch the host: shims record any call of a mutating command
+mkdir -p "$T/shim"; printf '#!/bin/sh\n[ "$1" = list ] || echo "zpool $*" >> "%s/marker"\nexit 0\n' "$T/shim" > "$T/shim/zpool"; chmod +x "$T/shim/zpool"
+for c in dd wipefs losetup curl targetcli iscsiadm partx mknod truncate; do printf '#!/bin/sh\necho "$0 $*" >> "%s/marker"\nexit 0\n' "$T/shim" > "$T/shim/$c"; chmod +x "$T/shim/$c"; done
+for t in host-kernelclean.sh host-stale-clean.sh cluster-build-repl.sh cluster-reset.sh cluster-join.sh ts-disk-add.sh; do
+	rm -f "$T/shim/marker"; PATH="$T/shim:$PATH" DRYRUN=1 "$TL/$t" b9 1 > "$T/dry.out" 2>&1 < /dev/null
+	[ ! -e "$T/shim/marker" ]; ck $? 0 "DRYRUN $t does not run a mutating host command"; done
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"
 grep -q "$(cat "$T/key")" -r "$T/state" 2>/dev/null; ck $? 1 "fake key never written into the state dir"
 echo "selftest: $pass passed, $fail failed"; [ $fail = 0 ]

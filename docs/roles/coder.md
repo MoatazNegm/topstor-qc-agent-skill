@@ -15,7 +15,7 @@ The verdict file, the full sheet `state/tests/test<id>.json`, the round's run.lo
    tool in this skill instead and tell the supervisor), or the environment (say so, no code change).
 4. The smallest change that fixes it; edit only what the problem needs; keep both flavours working (container and physical code
    paths; if the product has a flavour switch, test both paths of any guard you touch).
-5. Commit in each changed repo (clear message: test, step, cause, fix). `tools/code-deploy.sh <branch>`, restart/settle the nodes
+5. Commit in each changed repo (clear message: test, step, cause, fix). `tools/code-deploy.sh <branch>` (pushes the branch into the node software repo with the product push; a reset/join pulls from there), restart/settle the nodes
    so the code is loaded (`tools/cluster-settle.sh`), check the commit on every node.
 6. Run the WHOLE test locally from the downloaded sheet, NOT through the platform: a new round dir named `<round>-local`, evidence per
    step with `tools/log.sh <round>-local STEP ...`. No `qc-submit.sh` here.

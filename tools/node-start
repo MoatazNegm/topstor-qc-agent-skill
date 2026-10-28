@@ -1,3 +1,8 @@
 #!/bin/bash
 # node-start <node> [--wait [timeout s]]   power on / start a node (docker start, VBoxManage startvm, start_command); rc 10 = NEEDS-HUMAN (power it on by hand).
-. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; n=${1:?node name}; node_start "$n"; rc=$?; [ $rc = 10 ] && [ "$2" = --wait ] && log "waiting for a human to power on $n"; [ $rc = 0 ] || [ $rc = 10 ] || exit $rc; [ "$2" = --wait ] && { node_wait_up "$n" "${3:-1800}" || exit 1; }; exit $rc
+# With --wait, a NEEDS-HUMAN node is waited for (default 1800 s) and the tool exits 0 once the node answers, 1 on timeout.
+. "$(dirname "$(readlink -f "$0")")/lib/node.sh"; n=${1:?node name}; node_start "$n"; rc=$?
+[ $rc = 10 ] && [ "${2:-}" = --wait ] && log "waiting for a human to power on $n"
+[ $rc = 0 ] || [ $rc = 10 ] || exit $rc
+if [ "${2:-}" = --wait ]; then node_wait_up "$n" "${3:-1800}" || exit 1; exit 0; fi
+exit $rc

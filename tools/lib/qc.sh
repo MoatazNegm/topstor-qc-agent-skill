@@ -4,7 +4,7 @@
 QC_URL=$(cfg get platform.url); QC_URL=${QC_URL%/}
 QC_APP=$(cfg get platform.app_id)
 QC_KEYF=$(cfg get platform.tester_key_file)
-_qc_hdr() { printf 'X-API-Key: %s\n' "$(head -n1 "$QC_KEYF" | tr -d '\r\n')"; [ -n "$QC_APP" ] && printf 'X-App-Id: %s\n' "$QC_APP"; }
+_qc_hdr() { printf 'X-API-Key: %s\n' "$(head -n1 "$QC_KEYF" | tr -d '\r\n')"; [ -n "${QC_APP:-}" ] && printf 'X-App-Id: %s\n' "$QC_APP"; }
 # qc_curl <path> [curl args...] -> reply body on stdout
 qc_curl() { local p=$1; shift; [ -r "$QC_KEYF" ] || die "tester key file not readable: $QC_KEYF"
 	curl -s -m "${QC_TIMEOUT:-60}" -H @<(_qc_hdr) "$@" "$QC_URL/${p#/}"; }

@@ -42,6 +42,8 @@ suspended pools). They apply to every flavour; the container-flavour items matte
   "Remove a disk" = only for a free disk: remove it from the list, clean LIO, delete the stale SCSI device, detach the loop.
 - `tools/host-stale-clean.sh` at the start of a build (after every node was stopped): stale LIO disks and loops of earlier tests
   otherwise survive into the new cluster (a test once saw 17 instead of 12 disks).
+- Replication builds: `tools/cluster-build-repl.sh` (logs out iSCSI gracefully only while no pool is imported).
+- Not ported (write them yourself with the API calls named in the original harness): replica hot-add and disk lists, replication/group/domain/flask/balance wait loops, failover watch, SMB/NFS volume settings. Use `ts_api` from `tools/lib/tstor.sh` and `run`; keep DRYRUN.
 - Replication setups: `tools/repl-iscsi-cross.sh` only with explicit node arguments; never for the owner of an imported pool
   (re-logging its own target suspended its pool once). The ACL is lost when the node restarts: run it again then.
 
@@ -56,13 +58,17 @@ suspended pools). They apply to every flavour; the container-flavour items matte
   the old branch).
 - Do not run heavy disk cleanup during a join (it made a join fail once).
 
-## 5. Reboots of a host or hypervisor (evidence rule)
+## 5. Reboots of a host or hypervisor
 
-- Only the tester may request one, and only with evidence of a hung kernel/pool: a SUSPENDED pool that does not clear, `txg_sync`
-  in D state, or `zpool list` rc 124. A tool or pool problem is not a code error: after the reboot the tester resumes the test from
-  `RESUME.md` and does not fail the step.
-- Before approving, the supervisor tells every other agent; each must reach a point it can resume from (state saved, restart
-  command written) and confirm. Then the supervisor approves this one reboot, and tells the user in the next report.
+- Controlled by `loop.reboot_for_tool_problems` (default true; the value is printed in every supervisor snapshot).
+  true: the tester may request a reboot for ANY problem caused by its tools or by a suspended/hung pool (not a code error), with
+  evidence in `run.log` (the failing command and output, SUSPENDED pool, `txg_sync` in D state, `zpool list` rc 124, ...).
+  false: only for a hung kernel/pool: a SUSPENDED pool that does not clear, `txg_sync` in D state, or `zpool list` rc 124.
+- A tool or pool problem is not a code error: after the reboot the tester resumes the test from `RESUME.md` and does NOT fail the step.
+  The request and the resume are logged in `run.log`.
+- Before approving, the supervisor tells every other agent; each saves its state, writes its restart command and confirms it can
+  resume its current job. Then the supervisor approves this one reboot (a hard reboot by any means is allowed, e.g. SysRq) and tells
+  the user in the next report. Approval covers that one reboot only.
 - Never restart the host's docker engine; never run a host-wide `sync` while a pool may be suspended (it blocks in D state).
 - Never change the host's own management interface, its routes or firewall input rules; ask the user before any host network change.
 - After a reboot: start the helper containers that do not come back by themselves, check `zpool list` is clean, resume the agents.

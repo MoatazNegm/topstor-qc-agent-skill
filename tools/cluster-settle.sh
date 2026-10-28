@@ -8,7 +8,7 @@
 N=${1:?node}; shift; AFTER=0; NOSYNC=0; S=$(cfg get cluster.settle_seconds 300)
 while [ $# -gt 0 ]; do case $1 in --after-start) AFTER=1;; --no-sync) NOSYNC=1;; --settle) S=$2; shift;; esac; shift; done
 CL=$(cfgn "$N" cluster 1); CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip)
-[ -n "$DRYRUN" ] && { echo "DRYRUN: settle $N (after-start=$AFTER) ${S}s, isinsync on $CIP"; exit 0; }
+[ -n "${DRYRUN:-}" ] && { echo "DRYRUN: settle $N (after-start=$AFTER) ${S}s, isinsync on $CIP"; exit 0; }
 T0=$SECONDS
 node_wait_up "$N" 1800 || exit 1
 seen=0 quiet=0 lines=-1 stall=0 B=$(node_bootid "$N")

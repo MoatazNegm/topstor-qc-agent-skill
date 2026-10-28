@@ -10,13 +10,18 @@ while [ $# -gt 0 ]; do case $1 in --cluster) CL=$2; shift;; --single) SINGLE=1;;
 S=$QC_STATE/builds/build$BUILD; mkdir -p "$S"; : > "$S/status"
 st() { echo "$(date +%T) $*" | mask | tee -a "$S/status"; }; stop() { st "STOP: $*"; exit 1; }
 FL=$(cfg get cluster.flavour); P=$(primary_of "$CL"); [ -n "$P" ] || stop "cluster $CL has no primary"
-CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip); FB=$(cfg get cluster.first_boot_ip 10.11.11.250)
+CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip); FB=$(cfg get cluster.first_boot_ip)
 BITS=$(cfg get cluster.subnet_bits 24); RPW=$(cfg get cluster.reset_admin_password_file); RPW=${RPW:-$(pwfile_for "$CIP")}
 TP=$(cfg get repos.node_paths.topstor /TopStor)
 MEMBERS=$(cluster_nodes "$CL" | grep -vx "$P")
 for n in $(cluster_nodes "$CL"); do [ "$(node_state "$n")" = running ] || continue
 	zpool_answers "$n" || stop "zpool does not answer on $n (report at once)"
 	[ -n "$(pools_on "$n")" ] && stop "a pool is imported on $n ($(pools_on "$n" | tr '\n' ' ')): export it with cluster-stopnode.sh first"; done
+if [ -n "${DRYRUN:-}" ]; then st "DRYRUN: would stop members [$(echo $MEMBERS)], clean stale LIO/loop state (container flavour), reset $P, set its address/cluster $CIP/$BITS through the API, reset+join members, set export lists to none if --no-disks (nothing touched)"; exit 0; fi
+# the branch the nodes pull on reset/join must exist in origin (the product pulls from the software repo, not from a bundle)
+BR=$(cfg get deploy.branch); [ -z "$BR" ] || "$QC_TOOLS/code-deploy.sh" --check-branch "$BR" || stop "branch $BR is not in the node software repo: push it first (code-deploy.sh)"
+# container flavour: one shared kernel keeps old LIO targets/loops/SCSI disks alive: clean them while the primary is still up as helper
+if [ "$FL" = container ]; then st "clean stale LIO/loop state"; "$QC_TOOLS/host-stale-clean.sh" >> "$S/status" 2>&1 || stop "host-stale-clean.sh failed (see status)"; fi
 # only one node may sit on the first-boot address at a time: members down while the primary is reset
 for m in $MEMBERS; do [ "$(node_state "$m")" = running ] && { st "stop member $m"; "$QC_TOOLS/cluster-stopnode.sh" "$m" || stop "could not stop $m"; }; done
 reset_node() {   # reset_node <node>: run the product reset without a TTY and wait until it is over (it may restart the node)
@@ -48,6 +53,7 @@ done; fi
 if [ $NODISKS = 1 ] && [ "$FL" = container ]; then
 	st "no test disks: export lists set to none"
 	for n in $(cluster_nodes "$CL"); do [ "$(node_state "$n")" = running ] && node_exec "$n" 'echo none > /root/loopdisks'; done
+	"$QC_TOOLS/host-kernelclean.sh" >> "$S/status" 2>&1 || st "WARN: host-kernelclean.sh after --no-disks failed"
 fi
 V=""; for r in topstor pace topstorweb; do V="$V $r $(node_exec "$P" "cd $(cfg get repos.node_paths.$r) && echo \$(git branch --show-current) \$(git rev-parse --short HEAD)" 2>/dev/null)"; done
 st "DONE: $([ $SINGLE = 1 ] && echo 1-node || echo multi-node) cluster $CIP is up;$V"

@@ -9,7 +9,7 @@ for r in $REPOS; do u=$(repo_url "$r")
 	[ -z "$(g "$r" status --porcelain)" ] || { echo "$r: uncommitted changes: commit them first"; bad=1; continue; }
 	run g "$r" push -q "$u" "$BR:$BR" 2>&1 | mask | tail -2
 	l=$(g "$r" rev-parse HEAD); rm_=$(gls "$u" "refs/heads/$BR" | cut -f1)
-	[ -n "$DRYRUN" ] && { echo "$r: DRYRUN local=${l:0:8}"; continue; }
+	[ -n "${DRYRUN:-}" ] && { echo "$r: DRYRUN local=${l:0:8}"; continue; }
 	[ "$l" = "$rm_" ] && echo "$r: pushed, remote has the same commit ${l:0:8}" || { echo "$r: MISMATCH local=${l:0:8} remote=${rm_:0:8}"; bad=1; }
 done
 exit $bad

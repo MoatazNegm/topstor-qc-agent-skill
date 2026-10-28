@@ -9,7 +9,7 @@ t_start() { [ "$(_vmstate "$1")" = running ] && return 0; _vbm "$1" startvm "$(_
 t_stop() {
 	if [ "$2" = --hard ]; then _vbm "$1" controlvm "$(_vm "$1")" poweroff; return; fi   # a real power cut ("sudden death")
 	_vbm "$1" controlvm "$(_vm "$1")" acpipowerbutton || return
-	[ -n "$DRYRUN" ] && return 0
+	[ -n "${DRYRUN:-}" ] && return 0
 	local i; for i in $(seq 1 36); do [ "$(_vmstate "$1")" = poweroff ] && return 0; sleep 5; done
 	echo "VM $(_vm "$1") still not powered off after 180 s" >&2; return 4
 }

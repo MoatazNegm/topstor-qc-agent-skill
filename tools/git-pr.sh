@@ -17,10 +17,10 @@ f,t,h,b,bf,ls=sys.argv[1:7]
 body=open(bf).read() if bf else "Opened by the TopStor QC agent after one full QualityCheck iteration passed with no code change.\n\nLoop state: "+ls
 json.dump({"title":t,"head":h,"base":b,"body":body,"maintainer_can_modify":True},open(f,"w"))
 PY
-	if [ -n "$DRYRUN" ]; then echo "DRYRUN: POST repos/$up/pulls $(cat "$J")"; rm -f "$J"; continue; fi
+	if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: POST repos/$up/pulls $(cat "$J")"; rm -f "$J"; continue; fi
 	O=$(gh_api POST "repos/$up/pulls" "$J"); rm -f "$J"
 	url=$(echo "$O" | python3 -I -c 'import sys,json;print(json.load(sys.stdin).get("html_url",""))' 2>/dev/null)
-	if [ -z "$url" ]; then url=$(gh_api GET "repos/$up/pulls?head=${head/:*/}:$BR&state=open" | python3 -I -c 'import sys,json;d=json.load(sys.stdin);print(d[0]["html_url"] if d else "")' 2>/dev/null)
+	if [ -z "$url" ]; then url=$(gh_api GET "repos/$up/pulls?head=${mine%%/*}:$BR&state=open" | python3 -I -c 'import sys,json;d=json.load(sys.stdin);print(d[0]["html_url"] if d else "")' 2>/dev/null)
 		[ -n "$url" ] && echo "$r: PR already open: $url" || echo "$r: PR FAILED: $(echo "$O" | mask | cut -c1-300)"
 	else echo "$r: PR opened: $url"; fi
 done

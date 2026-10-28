@@ -3,8 +3,8 @@
 #   show                           one line for the report
 #   set-tests <id...> | --from-platform   the tests of one full iteration (config loop.iteration_tests, else GET /tests)
 #   test-done <test id> <pass|fail>       a platform test finished (pass = every step passed)
-#   code-change <branch> <reason...>      a code fix was pushed: the clean count restarts at 0
-#   is-clean                       rc 0 when every test of the iteration passed since the last code change (= PR allowed)
+#   code-change <branch> <reason...>      a code fix was pushed: a NEW iteration starts from the first test, clean count = 0
+#   is-clean                       rc 0 when one whole iteration ran with every test passing, no failed run and no code change (= PR allowed)
 . "$(dirname "$(readlink -f "$0")")/lib/common.sh"
 F=$QC_STATE/loop.json
 case ${1:-show} in
@@ -17,31 +17,31 @@ esac
 python3 -I - "$F" "$@" <<'PY'
 import json,sys,os,time
 f=sys.argv[1]; a=sys.argv[2:]
-s=json.load(open(f)) if os.path.exists(f) else {"iteration":1,"tests":[],"done":{},"since_change":[],"clean_in_row":0,"changes":[],"clean_iterations":0}
+s=json.load(open(f)) if os.path.exists(f) else {"iteration":1,"tests":[],"done":{},"dirty":False,"clean_in_row":0,"changes":[],"clean_iterations":0}
 cmd=a[0] if a else "show"
 def save(): json.dump(s,open(f+".new","w"),indent=1); os.replace(f+".new",f)
 if cmd=="set-tests": s["tests"]=a[1:]; save()
 elif cmd=="test-done":
     t,r=a[1],a[2]; s["done"][t]=r
-    if r=="pass":
-        s["clean_in_row"]+=1
-        if t not in s["since_change"]: s["since_change"].append(t)
-    else: s["clean_in_row"]=0
+    if r=="pass": s["clean_in_row"]+=1
+    else: s["clean_in_row"]=0; s["dirty"]=True       # a failed run makes THIS iteration not clean, even if the test passes later
     if s["tests"] and all(x in s["done"] for x in s["tests"]):
-        clean=all(x in s["since_change"] for x in s["tests"])
+        clean=(not s.get("dirty")) and all(s["done"][x]=="pass" for x in s["tests"])
         s.setdefault("log",[]).append({"iteration":s["iteration"],"clean":clean,"ended":time.strftime("%F %T")})
         if clean: s["clean_iterations"]+=1
-        s["iteration"]+=1; s["done"]={}
+        s["iteration"]+=1; s["done"]={}; s["dirty"]=False
     save()
 elif cmd=="code-change":
-    s["changes"].append({"time":time.strftime("%F %T"),"branch":a[1],"reason":" ".join(a[2:])})
-    s["clean_in_row"]=0; s["since_change"]=[]; save()
+    # a pushed fix: the version under test changed, so the NEXT run is a whole new iteration from the first test (CLAUDE.md
+    # "a new version makes the next run iteration 1 again"); every earlier clean result is void.
+    s["changes"].append({"time":time.strftime("%F %T"),"branch":a[1],"reason":" ".join(a[2:]),"at_iteration":s["iteration"]})
+    s["clean_in_row"]=0; s["clean_iterations"]=0; s["iteration"]+=1; s["done"]={}; s["dirty"]=False; save()
 elif cmd=="is-clean":
-    ok=bool(s["tests"]) and all(x in s["since_change"] for x in s["tests"])
-    print("CLEAN: every test of the iteration passed since the last code change" if ok else "NOT CLEAN"); sys.exit(0 if ok else 1)
+    ok=bool(s["tests"]) and s["clean_iterations"]>=1
+    print("CLEAN: one full iteration passed with no failure and no code change" if ok else "NOT CLEAN"); sys.exit(0 if ok else 1)
 left=[x for x in s["tests"] if x not in s["done"]]
-print("iteration %d: %d of %d tests done, %d left (%s); passed in a row with no code change: %d; tests passed since the last code change: %d of %d; clean full iterations: %d; code changes: %d (last: %s)"%(
+print("iteration %d: %d of %d tests done, %d left (%s); passed in a row with no code change: %d; clean full iterations: %d; code changes: %d (last: %s)"%(
  s["iteration"],len(s["tests"])-len(left),len(s["tests"]),len(left)," ".join(left) or "-",s["clean_in_row"],
- len([x for x in s["since_change"] if x in s["tests"]]),len(s["tests"]),s["clean_iterations"],len(s["changes"]),
+ s["clean_iterations"],len(s["changes"]),
  (s["changes"][-1]["branch"] if s["changes"] else "none")))
 PY

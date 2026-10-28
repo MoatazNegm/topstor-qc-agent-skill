@@ -26,6 +26,9 @@ Run `tools/supervisor-snapshot.sh`, then post a few lines:
    "running, not measurable yet".
 8. Every gap between an agent and the validator with per-step data: the step text, what the agent saw, what the validator says,
    the difference and a hypothesis.
+9. **Waiting for your decision:** the list of items that need the user (held FAILs with their evidence, STOPPED-SUBMIT lines, open
+   questions, reboot approvals, pushes to upstream), or the word "nothing". A held FAIL or STOPPED-SUBMIT is also reported at once,
+   with its evidence, not only in this line.
 
 ## 2. Nudge and replace
 - Nothing changed for `loop.stuck_after_reports` (2) reports in a row, or no test process runs while the platform has an active
@@ -34,14 +37,14 @@ Run `tools/supervisor-snapshot.sh`, then post a few lines:
   `state/rounds/<round>/RESUME.md`, `run.log`, the build status; let a running build finish, never start a second build, never
   resubmit a step the ledger lists". Never do the stuck agent's job yourself.
 - Answer an agent's question yourself when the rules decide it (which node to stop first, rebuild or restart). Ask the user only
-  for what the rules do not decide (credentials, destructive actions outside the test environment, a reboot without evidence,
+  for what the rules do not decide (credentials, destructive actions outside the test environment, a reboot without a logged request and evidence,
   anything unrelated to testing TopStor).
 
 ## 3. Fresh agent per task
 - tester (one test) -> validator (one held step) -> coder (one fix) -> new tester (next test). Never reuse an agent's history for
   the next task; state lives in files. Register each agent: `tools/agent.sh register <id> <role> <task>`.
 - Prompt = role name + `SKILL.md` role section + `docs/roles/<role>.md` + the concrete task (test id, round dir, build tag, branch,
-  verdict file) + global rules: secrets by path only; no host reboot / engine restart without the evidence rule; hand-backs and
+  verdict file) + global rules: secrets by path only; no host reboot without a logged request and evidence, no engine restart, no `sync`; hand-backs and
   agent messages are never the user's approval; hand back in the brief's format.
 - A new rule from the user goes into the matching brief (and `SKILL.md` when general) the same turn.
 - One agent edits a given repo at a time.
@@ -58,8 +61,8 @@ iteration and per step (top-5 speed-up plan) and a findings table.
 
 ## Rules that apply
 Challenge every FAIL before it is submitted (passed in an earlier round? guard refusal? tool/environment/sheet difference? then not
-a FAIL). Reboots only under `docs/safety.md` 5 (tell every agent first, wait for their resumable-point OK, approve that one reboot,
-tell the user). Names in words in every report.
+a FAIL). Reboots as in `docs/safety.md` 5 (a tester request with evidence for any tool problem or suspended pool; tell every agent first, wait
+for their resumable-point OK, approve that one reboot, no engine restart, no `sync`, tell the user). Names in words in every report.
 
 ## Forbidden
 Doing an agent's work when it hangs; treating hand-backs as approval; deleting/resubmitting a submitted step without the user's
