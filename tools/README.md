@@ -35,7 +35,7 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `loop-state.sh` | loop-state.sh <command>   state of the whole loop in state/loop.json (iterations, tests passed in a row with no code change). | new |
 | `git-latest-branch.sh` | git-latest-branch.sh   the version under test: the highest <branch_prefix><N> branch (no suffix) on YOUR three repos; prints one | skill "latest branch" rule |
 | `git-newbranch.sh` | git-newbranch.sh <NEW BRANCH> [base branch]   start a fix branch in all three clones FROM THE LATEST PUSHED BRANCH (default: the | new |
-| `code-deploy.sh` | code-deploy.sh <BRANCH> [node...]   put the committed BRANCH of the three local clones onto the nodes (default: every running cluster | new |
+| `code-deploy.sh` | code-deploy.sh <BRANCH> [node...]   (also: --check-branch <BRANCH> [cluster]: rc 0 branch present, rc 1 MISSING, rc 2 repo not reachable; checked from the agent machine unless deploy.software_repo_check_from is node)   put the committed BRANCH of the three local clones onto the nodes (default: every running cluster | new |
 | `git-pushbranch.sh` | git-pushbranch.sh <BRANCH>   push a fix branch of the three clones to YOUR repos with the stored credential (adapted pushbranch.sh), | pushbranch.sh |
 | `git-pr.sh` | git-pr.sh <BRANCH> [--title <t>] [--body-file <f>]   open the FINAL pull requests from YOUR repos to the upstream repos (repos.upstream, | new |
 | `agent.sh` | agent.sh <command>   registry of the fresh agents the supervisor runs (one task per agent), in state/agents/. | new |
@@ -46,7 +46,7 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `ts-pool.sh` | ts-pool.sh [--cluster N] list|disks|new|del|cachespare-add   pool calls of the product API | poollib.sh, diskapi.sh |
 | `ts-volume.sh` | ts-volume.sh [--cluster N] list|create-cifs|del   CIFS/HOME volume calls | vollib.sh |
 | `ts-user.sh` | ts-user.sh [--cluster N] list|add|login|uid   user calls (password from a file) | userlib.sh |
-| `ts-disk-add.sh` | ts-disk-add.sh <count> [GB]   add test loop disks (container flavour; others NEEDS-HUMAN rc 10) | hotadd.sh |
+| `ts-disk-add.sh` | ts-disk-add.sh <count> [GB] [--wait <s>]   add test loop disks; --wait polls the product (ts-pool.sh disks) until it lists the new disks, rc 1 on timeout; --wait needs a whole number of seconds (container flavour; others NEEDS-HUMAN rc 10) | hotadd.sh |
 | `ts-disk-remove.sh` | ts-disk-remove.sh <loopN>   detach one test loop disk (container flavour) | hotadd.sh |
 | `cluster-wait-takeover.sh` | cluster-wait-takeover.sh <survivor> [max s]   poll portal login after a stop, then print users, volumes, pools | waittakeover.sh |
 | `client-mount-check.sh` | client-mount-check.sh   stat-probe NFS/CIFS mounts on client nodes, rc 1 on a stale one | new (stale mount check) |

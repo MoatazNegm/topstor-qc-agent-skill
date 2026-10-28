@@ -4,6 +4,7 @@
 # the tester key (prints the user name and role only), every node answers node-exec, and your three repos are reachable.
 # rc 2 = config missing/incomplete: STOP and ask the user to fill config/input.yaml (copy config/input.example.yaml); do nothing else.
 # rc 1 = a check failed (fix it or ask the user); rc 0 = ready.
+export PYTHONDONTWRITEBYTECODE=1
 QC_ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 CF=${QC_CONFIG:-$QC_ROOT/config/input.yaml}
 if [ ! -f "$CF" ]; then

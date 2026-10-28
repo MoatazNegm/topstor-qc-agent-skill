@@ -38,7 +38,7 @@ suspended pools). They apply to every flavour; the container-flavour items matte
 
 - Test disks are host loop devices on sparse files outside the nearly-full root disk. Every node gets its OWN disks (disjoint export
   lists `/root/loopdisks`): a device can back only one LIO backstore, so the node that exports it first owns it.
-- "Add N disks while running" = attach loops, add the names to the node's list, wait until the disks are listed by the product.
+- "Add N disks while running" = attach loops, add the names to the node's list, wait until the disks are listed by the product (`tools/ts-disk-add.sh <n> [GB] --wait <s>` does this).
   "Remove a disk" = only for a free disk: remove it from the list, clean LIO, delete the stale SCSI device, detach the loop.
 - `tools/host-stale-clean.sh` at the start of a build (after every node was stopped): stale LIO disks and loops of earlier tests
   otherwise survive into the new cluster (a test once saw 17 instead of 12 disks).

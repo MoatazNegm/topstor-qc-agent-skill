@@ -1,5 +1,6 @@
 # common.sh -- sourced by every tool: skill root, config access, state dir, logging, secret masking.
 # Not a command. Env: QC_CONFIG (config file), DRYRUN=1 (node/git/platform writes are printed, not run).
+export PYTHONDONTWRITEBYTECODE=1   # the tools never write __pycache__ into the skill tree
 QC_ROOT=${QC_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}
 QC_TOOLS=$QC_ROOT/tools
 cfg() { python3 -I "$QC_TOOLS/lib/cfg.py" "$@"; }

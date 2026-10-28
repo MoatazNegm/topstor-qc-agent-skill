@@ -5,6 +5,7 @@
 # (hypervisor or hardware), exit 10 = NEEDS-HUMAN. --wait <seconds> (last argument): poll ts-pool.sh disks until the product lists more disks. Needs config keys container_host.disk_dir and container_host.loopdisks_files.
 . "$(dirname "$(readlink -f "$0")")/lib/node.sh"
 WAIT=0; if [ "${*: -2:1}" = --wait ]; then WAIT=${*: -1}; set -- "${@:1:$#-2}"; fi
+case $WAIT in ""|*[!0-9]*) echo "--wait needs seconds (a whole number), got: $WAIT" >&2; exit 1;; esac
 N=${1:?count}; SZ=${2:-1}; DD=$(cfg get container_host.disk_dir ""); LF=$(cfg get container_host.loopdisks_files ""|tr ',' ' ')
 for n in $(cluster_nodes); do [ "$(node_type "$n")" = container ] || { echo "NEEDS-HUMAN: node $n is not a container node: add the disk in the hypervisor or hardware" >&2; exit 10; }; done
 [ -n "$DD" ] && [ -n "$LF" ] || die "set container_host.disk_dir and container_host.loopdisks_files in the config"

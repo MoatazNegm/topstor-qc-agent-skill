@@ -3,6 +3,7 @@
 # (DRYRUN, nothing is executed on any node), guards, loop state, masking, submit refusals, secret scan. Touches no cluster, no
 # platform, no repo. Fake secret files are created at run time in a temp dir and deleted at the end.
 set -u
+export PYTHONDONTWRITEBYTECODE=1
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd); T=$(mktemp -d); [ -n "${KEEP:-}" ] && echo "keeping $T" || trap 'rm -rf "$T"' EXIT
 pass=0; fail=0; ck() { if [ "$1" = "$2" ]; then pass=$((pass+1)); echo "ok   $3"; else fail=$((fail+1)); echo "FAIL $3 (got '$1', want '$2')"; fi; }
 for f in key pw cred sshkey; do head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$T/$f"; chmod 600 "$T/$f"; done
@@ -150,6 +151,9 @@ sed "s#$T/bare.git#$T/nonexistent.git#" "$T/input.yaml" > "$T/unr.yaml"; QC_CONF
 # G-03: the last test of an iteration fails, then a code change: the iteration number advances once
 rm -f "$T"/state/loop*.json 2>/dev/null; LS="$TL/loop-state.sh"
 $LS set-tests 10 11 >/dev/null; $LS test-done 10 pass >/dev/null; $LS test-done 11 fail >/dev/null; $LS code-change QSD5.9 x >/dev/null; $LS show | grep -q '^iteration 2:'; ck $? 0 "code-change after a closed iteration does not skip an iteration number"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 --wait 5m >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "whole number" "$T/w.err")" 11 "ts-disk-add --wait with a non-number is refused (rc 1)"
+# H-01: the selftest leaves the tree clean (no bytecode written)
+[ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"
 grep -q "$(cat "$T/key")" -r "$T/state" 2>/dev/null; ck $? 1 "fake key never written into the state dir"
 echo "selftest: $pass passed, $fail failed"; [ $fail = 0 ]

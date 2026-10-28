@@ -7,3 +7,5 @@ state/
 pw.sh
 .git-credentials
 *.bundle
+__pycache__/
+*.pyc
