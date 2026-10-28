@@ -152,6 +152,10 @@ sed "s#$T/bare.git#$T/nonexistent.git#" "$T/input.yaml" > "$T/unr.yaml"; QC_CONF
 rm -f "$T"/state/loop*.json 2>/dev/null; LS="$TL/loop-state.sh"
 $LS set-tests 10 11 >/dev/null; $LS test-done 10 pass >/dev/null; $LS test-done 11 fail >/dev/null; $LS code-change QSD5.9 x >/dev/null; $LS show | grep -q '^iteration 2:'; ck $? 0 "code-change after a closed iteration does not skip an iteration number"
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 --wait 5m >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "whole number" "$T/w.err")" 11 "ts-disk-add --wait with a non-number is refused (rc 1)"
+for bad in "x" "1.5" "0" "-1"; do QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" $bad >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "whole number\|at least" "$T/w.err")" 11 "ts-disk-add count '$bad' is refused (rc 1)"; done
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 2.5G >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "whole number" "$T/w.err")" 11 "ts-disk-add size '2.5G' is refused (rc 1)"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 --wait >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "got nothing" "$T/w.err")" 11 "ts-disk-add trailing --wait without a value is refused (rc 1)"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 >/dev/null 2>&1; ck $? 0 "ts-disk-add valid dry run still passes"
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"
