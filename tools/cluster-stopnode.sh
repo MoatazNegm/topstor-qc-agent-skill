@@ -8,7 +8,7 @@
 # 3 zpool does not answer (STOP, report at once), 4 stop did not finish, 5 refused by the iSCSI guard.
 . "$(dirname "$(readlink -f "$0")")/lib/tstor.sh"
 N=${1:?node}; shift; KEEP=0; HARD=; EXPORT=0
-for a in "$@"; do case $a in --keep-running) KEEP=1;; --hard) HARD=--hard;; --export) EXPORT=1;; esac; done
+for a in "$@"; do case $a in --keep-running) KEEP=1;; --hard) HARD=--hard;; --export) EXPORT=1;; *) die "unknown option $a";; esac; done
 FL=$(cfg get cluster.flavour); TYPE=$(node_type "$N")
 say() { log "stopnode $N: $*"; }
 [ "$(cfgn "$N" role)" = client ] && { QC_GUARDED=1 node_stop "$N"; exit; }

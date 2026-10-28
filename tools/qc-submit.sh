@@ -27,6 +27,17 @@ if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: would submit test $T step $S $RES ${
 ok=0; for i in 1 2 3 4 5 6; do o=$(qc_code tests/active); c=${o% *}; t=${o#* }; [ "$c" = 200 ] && [ "${t%.*}" -lt 5 ] && { ok=1; break; }
 	log "platform GET slow/err before submit: http $c ${t}s (try $i)" >> "$L"; sleep 30; done
 [ $ok = 1 ] || stop 6 "platform unhealthy for 3 minutes; nothing was sent"
+# K-02: the platform must name THIS step as the next one (a replacement agent or a second round of the same test must not submit a stored step again).
+# The id is read from the reply of GET test-results/<T>/next (fields id | step_id | step.id | nextStep.id); an unreadable reply is a NOTE only (the history check below still proves one row).
+NXJ=$(qc_get "test-results/$T/next"); NX=$(echo "$NXJ" | python3 -I -c 'import sys,json
+try: d=json.load(sys.stdin)
+except Exception: sys.exit()
+for k in ("id","step_id"):
+    if isinstance(d,dict) and d.get(k) is not None: print(d[k]); sys.exit()
+for k in ("step","nextStep","next"):
+    if isinstance(d,dict) and isinstance(d.get(k),dict) and d[k].get("id") is not None: print(d[k]["id"]); sys.exit()' 2>/dev/null)
+if [ -n "$NX" ]; then [ "$NX" = "$S" ] || stop 3 "platform says the next step of test $T is $NX, not $S: step $S is already stored or out of order (resume the existing round; do not submit again)"
+else echo "$(date +%T) NOTE could not read the next step from the platform (reply: $(echo "$NXJ" | tr -d '\n' | cut -c1-80)); relying on ledger + history check" >> "$L"; fi
 SINCE=$(cat "$D/startts" 2>/dev/null || date -u -d '-1 hour' +%Y-%m-%dT%H:%M:%S)
 E0=$(qc_earned); read -r H0 _ <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"
 case "$H0" in ""|*[!0-9]*) stop 6 "history unreadable before the submit (no proof possible afterwards); nothing was sent";; esac
@@ -52,7 +63,14 @@ if [ -z "$(echo "$O" | tr -d '[:space:]')" ]; then
 	sleep 20; read -r H1 _ <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"
 	[ "$H1" = $((H0+1)) ] && O="{\"result\":\"$RES\",\"note\":\"empty reply but history shows the row\"}" || stop 2 "UNKNOWN: empty reply/timeout and no new history row yet (rows $H0 -> $H1); NOT retried -- decide by hand"
 fi
-echo "$O" | grep -qi "\"result\": *\"$RES\"" || stop 1 "rejected: $(echo "$O" | cut -c1-300)"
+if ! echo "$O" | grep -qi "\"result\": *\"$RES\""; then
+	# K-03: a reply without the result (HTML 502/504, cut body) may still have stored the step: look at the history before calling it rejected
+	if echo "$O" | python3 -I -c 'import sys,json;d=json.load(sys.stdin);sys.exit(0 if isinstance(d,dict) and (d.get("error") or d.get("message")) else 1)' 2>/dev/null; then
+		stop 1 "rejected: $(echo "$O" | cut -c1-300)"; fi
+	sleep 20; read -r H1 _ <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"
+	if [ "$H1" = $((H0+1)) ]; then echo "$(date +%T) NOTE reply was not the expected result JSON but the history shows the row: $(echo "$O" | tr -d '\n' | cut -c1-80)" >> "$L"; O="{\"result\":\"$RES\"}"
+	else stop 2 "UNKNOWN: reply without the result ($(echo "$O" | tr -d '\n' | cut -c1-120)) and no new history row (rows $H0 -> $H1); NOT retried -- decide by hand"; fi
+fi
 echo "$T:$S" >> "$LED"
 PTS=$(echo "$O" | qc_json pointsAwarded 2>/dev/null); WARN=$(echo "$O" | qc_json warning 2>/dev/null); AE=$(echo "$O" | qc_json autoEnded 2>/dev/null); [ "$AE" = true ] || AE=
 if [ "$RES" = pass ]; then LAST=$QC_STATE/timings/.last_$T; if [ -f "$LAST" ]; then

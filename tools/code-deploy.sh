@@ -16,7 +16,7 @@
 # code, and prove the fix live before you push to your GitHub repos.
 . "$(dirname "$(readlink -f "$0")")/lib/git.sh"
 . "$QC_TOOLS/lib/node.sh"
-if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; CLC=${3:-1}; bad=0; unreach=0; any=0
+if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; valid_branch "$BR" || die "bad branch name '$BR' (letters, digits, . _ / - only)"; CLC=${3:-1}; bad=0; unreach=0; any=0
 	# rc 0 = branch present everywhere; rc 1 = branch MISSING in a reachable repo; rc 2 = repo/node NOT REACHABLE (nothing proven either way).
 	# deploy.software_repo_check_from: local (default, run from this machine: works with every node stopped) | node (ask the running primary
 	# of the cluster; use it only when the repo URL is reachable from the nodes alone).
@@ -30,7 +30,7 @@ if [ "${1:-}" = --check-branch ]; then BR=${2:?branch}; CLC=${3:-1}; bad=0; unre
 		echo "$o" | grep -q "refs/heads/$BR" || { echo "$r: branch $BR is MISSING in the node software repo $u"; bad=1; }; done
 	[ $any = 1 ] || echo "WARN: deploy.software_repo.* not configured: cannot check that $BR is in the node software repo" >&2
 	[ $bad = 1 ] && exit 1; [ $unreach = 1 ] && exit 2; exit 0; fi
-BR=${1:?branch}; shift; METHOD=$(cfg get deploy.method product-push)
+BR=${1:?branch}; shift; valid_branch "$BR" || die "bad branch name '$BR' (letters, digits, . _ / - only)"; METHOD=$(cfg get deploy.method product-push)
 if [ "$METHOD" = product-push ]; then
 	PN=$(cfg get deploy.push_node local); PC=$(cfg get deploy.push_command); PL=$(cfg get deploy.pull_command)
 	[ -n "$PC" ] || die "deploy.push_command is not set (see config/input.example.yaml); or set deploy.method: bundle for a quick test"

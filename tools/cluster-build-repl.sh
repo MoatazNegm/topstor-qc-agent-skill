@@ -12,8 +12,13 @@
 # loop-disk device numbers and ports. How to create a node is environment specific: create the cluster-1 node yourself (container, VM
 # or server), put it in the config with cluster: 1 and its own host/second_cluster_ip, then run this tool.
 . "$(dirname "$(readlink -f "$0")")/lib/tstor.sh"
-BUILD=${1:?build number}; shift; SINGLE=0; for a in "$@"; do [ "$a" = --single ] && SINGLE=1; done
-S=$QC_STATE/builds/build$BUILD; mkdir -p "$S"; : > "$S/status"
+BUILD=${1:?build number}; shift; SINGLE=0; for a in "$@"; do case $a in --single) SINGLE=1;; *) die "unknown option $a";; esac; done
+S=$QC_STATE/builds/build$BUILD; mkdir -p "$S" "$QC_STATE/builds"
+# K-04: never a second build at once, never wipe the status of a build that has not ended (restart it only on purpose: QC_BUILD_RESTART=1)
+if [ -z "${QC_BUILD_LOCKED:-}" ]; then exec 9>"$QC_STATE/builds/.lock"; flock -n 9 || { echo "REFUSED: another build is running (lock $QC_STATE/builds/.lock); let it finish, read its status file" >&2; exit 5; }; export QC_BUILD_LOCKED=1; fi
+if [ -z "${DRYRUN:-}" ] && [ -s "$S/status" ] && ! tail -n1 "$S/status" | grep -qE '(DONE|STOP):' && [ -z "${QC_BUILD_RESTART:-}" ]; then
+	echo "REFUSED: build$BUILD has a status that did not end with DONE/STOP: $(tail -n1 "$S/status" | cut -c1-100). Resume from it; QC_BUILD_RESTART=1 starts it over on purpose" >&2; exit 5; fi
+: > "$S/status"
 st() { echo "$(date +%T) $*" | mask | tee -a "$S/status"; }; stop() { st "STOP: $*"; exit 1; }
 N1=$(cluster_nodes 1); N2=$(cluster_nodes 2)
 [ -n "$N1" ] && [ -n "$N2" ] || stop "the config needs nodes in cluster 1 AND cluster 2"

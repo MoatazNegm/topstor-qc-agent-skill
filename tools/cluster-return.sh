@@ -16,7 +16,7 @@ HL=$(node_exec "$LD" hostname | tr -d '\r\n')
 log "before: leader=$HL ($LD) ready=$(gl ready --prefix) nextlead=$(gl nextlead/er) isinsync=$(gl isinsync)"
 SMP=$QC_STATE/tmp/return-$TAG.samples; : > "$SMP"
 ( while [ ! -f "$SMP.stop" ]; do c=$(curl -s -m 2 -o /dev/null -w '%{http_code}' "http://$CIP:$TS_PORT/"); echo "$(date +%T) $c" >> "$SMP"; sleep 2; done ) &
-rm -f "$SMP.stop"
+rm -f "$SMP.stop"; trap 'touch "$SMP.stop"' EXIT   # K-12: the sampler always ends, also on a kill / abort
 T0=$SECONDS; [ -z "$NOSTART" ] && { log "START $R"; node_start "$R" || { touch "$SMP.stop"; log "start of $R failed"; exit 1; }; }
 "$QC_TOOLS/cluster-settle.sh" "$R" --after-start && ok "$R settled after $((SECONDS-T0))s (incl. the real settle and isinsync)" || bad "$R did not settle"
 touch "$SMP.stop"; sleep 3

@@ -159,6 +159,78 @@ QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 >/dev/null 2>&1; ck $? 0 "
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 08 09 >/dev/null 2>&1; ck $? 0 "ts-disk-add count 08 size 09 (leading zeros) is accepted as decimal"
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 1 --wait 08 >/dev/null 2>&1; ck $? 0 "ts-disk-add --wait 08 (leading zero) is accepted as decimal"
 QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/ts-disk-add.sh" 1 1 2 >/dev/null 2>"$T/w.err"; ck "$?$(grep -c "too many" "$T/w.err")" 11 "ts-disk-add extra positional argument is refused (rc 1)"
+# FEEDBACK-6 cases. A docker shim answers for the container nodes d1/d2 (no real docker, nothing runs anywhere).
+mkdir -p "$T/dshim"; cat > "$T/dshim/docker" <<'SH'
+#!/bin/sh
+case "$1" in
+inspect) echo running; exit 0;;
+exec) shift; shift; cmd="$*"
+	case "$cmd" in
+	*"pgrep -x iscsid"*) [ "$2" = "x" ] ; exit 0;;
+	*initiatorname*) echo "InitiatorName=iqn.test:ini"; exit 0;;
+	hostname*|*"sh -c hostname"*) echo hostn; exit 0;;
+	*cpoolowner*) exit 0;;
+	*"iscsiadm -m session"*) [ -n "$FAKE_SESSION" ] && echo "tcp: [1] 10.0.0.212:3266,1 iqn.2016-03.com.hostn:t1 (non-flash)"; exit 0;;
+	*"zpool list"*) [ -n "$FAKE_POOL" ] && echo "$FAKE_POOL"; exit 0;;
+	*) echo "$cmd" >> "$FAKE_LOG"; exit 0;;
+	esac;;
+esac
+exit 0
+SH
+chmod +x "$T/dshim/docker"
+# K-01: session to the target + imported pool = refused (rc 5), nothing logged out; no session = login-only path allowed; session but no pool = allowed
+FAKE_LOG=$T/k01.log; : > "$FAKE_LOG"; export FAKE_LOG
+QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_SESSION=1 FAKE_POOL=tank "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck "$?$(grep -c 'REFUSED' "$T/k01.out")$(grep -c 'iscsiadm -m node' "$FAKE_LOG")" 510 "K-01 repl-iscsi-cross refuses a logout while a pool is imported and the holder has a session"
+: > "$FAKE_LOG"; QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_POOL=tank "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck "$?$(grep -c 'iscsiadm -m node.* -u' "$FAKE_LOG")" 01 "K-01 no session to the target yet: login-only path allowed with a pool imported (logout is a no-op there)"
+: > "$FAKE_LOG"; QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_SESSION=1 "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck $? 0 "K-01 session but no pool imported: allowed"
+# K-13: branch names with shell metacharacters are refused before anything runs
+for bad in 'x;touch /tmp/pwn' 'a b' '$(id)' '-x'; do QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/code-deploy.sh" "$bad" > "$T/k13.out" 2>&1; ck "$?$(grep -c 'bad branch name' "$T/k13.out")" 11 "K-13 code-deploy refuses branch '$bad'"; done
+QC_CONFIG=$T/dry.yaml "$TL/git-newbranch.sh" 'x;id' > "$T/k13.out" 2>&1; ck "$?$(grep -c 'bad branch name' "$T/k13.out")" 11 "K-13 git-newbranch refuses a bad branch name"
+QC_CONFIG=$T/dry.yaml "$TL/git-pushbranch.sh" 'x y' > "$T/k13.out" 2>&1; ck "$?$(grep -c 'bad branch name' "$T/k13.out")" 11 "K-13 git-pushbranch refuses a bad branch name"
+# K-05: settle seconds validated; unknown options refused; config validate rejects a non-integer
+QC_CONFIG=$T/dry.yaml "$TL/cluster-settle.sh" d1 --settle abc > "$T/k05.out" 2>&1; ck "$?$(grep -c 'whole number' "$T/k05.out")" 11 "K-05 cluster-settle --settle abc refused"
+QC_CONFIG=$T/dry.yaml "$TL/cluster-settle.sh" d1 --settle > "$T/k05.out" 2>&1; ck "$?$(grep -c 'whole number' "$T/k05.out")" 11 "K-05 cluster-settle --settle without a value refused"
+QC_CONFIG=$T/dry.yaml "$TL/cluster-settle.sh" d1 --aftre-start > "$T/k05.out" 2>&1; ck "$?$(grep -c 'unknown option' "$T/k05.out")" 11 "K-05 cluster-settle unknown option refused"
+sed 's#settle_seconds: 1#settle_seconds: 5m#' "$T/input.yaml" > "$T/ss.yaml"; QC_CONFIG=$T/ss.yaml python3 -I "$TL/lib/cfg.py" validate 2>&1 | grep -q 'settle_seconds: must be a whole number'; ck $? 0 "K-05 config validate rejects settle_seconds 5m"
+# K-10 / K-04: unknown options on the build and stop tools are refused
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/cluster-reset.sh" b9 --no-disk > "$T/k10.out" 2>&1; ck "$?$(grep -c 'unknown option' "$T/k10.out")" 11 "K-10 cluster-reset --no-disk (typo) refused"
+QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/cluster-build-repl.sh" b9 --sngle > "$T/k10.out" 2>&1; ck "$?$(grep -c 'unknown option' "$T/k10.out")" 11 "K-10 cluster-build-repl typo option refused"
+QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" "$TL/cluster-stopnode.sh" d1 --hrad > "$T/k10.out" 2>&1; ck "$?$(grep -c 'unknown option' "$T/k10.out")" 11 "K-10 cluster-stopnode --hrad (typo) refused"
+# K-04: a build whose status did not end is not wiped; a held lock refuses a second build
+mkdir -p "$T/state/builds/build77"; echo "10:00:00 resetting node" > "$T/state/builds/build77/status"
+QC_CONFIG=$T/dry.yaml "$TL/cluster-reset.sh" 77 > "$T/k04.out" 2>&1; ck "$?$(grep -c 'did not end' "$T/k04.out")" 51 "K-04 unfinished build status is not wiped"
+[ "$(cat "$T/state/builds/build77/status")" = "10:00:00 resetting node" ]; ck $? 0 "K-04 status file untouched after the refusal"
+( exec 8>"$T/state/builds/.lock"; flock -n 8; QC_CONFIG=$T/dry.yaml "$TL/cluster-reset.sh" 78 > "$T/k04b.out" 2>&1; echo "$?$(grep -c 'another build is running' "$T/k04b.out")" > "$T/k04b.rc" ); ck "$(cat "$T/k04b.rc")" 51 "K-04 a held build lock refuses a second build"
+# K-02/K-03/K-10 offline: a local fake platform (python http.server) answers the platform calls
+mkdir -p "$T/plat"; cat > "$T/plat/srv.py" <<'PY'
+import json,sys
+from http.server import BaseHTTPRequestHandler,HTTPServer
+class H(BaseHTTPRequestHandler):
+    def log_message(self,*a): pass
+    def _s(self,c,b,ct="application/json"):
+        self.send_response(c); self.send_header("Content-Type",ct); self.end_headers(); self.wfile.write(b.encode())
+    def do_GET(self):
+        p=self.path
+        if p.startswith("/api/tests/active"): self._s(200,"{}")
+        elif p.startswith("/api/test-results/summary"): self._s(200,'{"monthEarned":0}')
+        elif p.startswith("/api/test-results/history"): self._s(200,"[]")
+        elif p.startswith("/api/test-results/5/next"): self._s(200,'{"id":99,"step_number":3}')
+        elif p.startswith("/api/tests/6"): self._s(200,'{"error":"not found"}')
+        else: self._s(404,"{}")
+    def do_POST(self):
+        n=int(self.headers.get("Content-Length") or 0); self.rfile.read(n)
+        if "/complete" in self.path: self._s(500,'{"error":"boom"}')
+        else: self._s(200,"{}")
+HTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()
+PY
+PORT=$((20000+RANDOM%20000)); python3 -I "$T/plat/srv.py" $PORT & SRV=$!; sleep 1
+sed "s#https://qc.example.invalid/api#http://127.0.0.1:$PORT/api#" "$T/input.yaml" > "$T/plat.yaml"
+mkdir -p "$T/state/rounds/b5i1"; date -u +%Y-%m-%dT%H:%M:%S > "$T/state/rounds/b5i1/startts"; echo c > "$T/pc"
+QC_CONFIG=$T/plat.yaml "$TL/qc-submit.sh" b5i1 5 7 pass "$T/pc" > "$T/k02.out" 2>&1; ck "$?$(grep -c 'next step of test 5 is 99' "$T/state/rounds/b5i1/run.log" 2>/dev/null)" 31 "K-02 submit refused when the platform's next step is another step (nothing sent)"
+QC_CONFIG=$T/plat.yaml "$TL/qc-dltest.sh" 6 > "$T/k10.out" 2>&1; ck $? 1 "K-10 qc-dltest refuses a reply without steps"
+[ ! -e "$T/state/tests/test6.json" ]; ck $? 0 "K-10 qc-dltest keeps no file for a reply without steps"
+QC_CONFIG=$T/plat.yaml "$TL/qc-complete.sh" b5i1 5 complete > "$T/k10.out" 2>&1; ck "$?$(grep -q 'http 500' "$T/k10.out" && echo 1)" 11 "K-10 qc-complete exits non-zero on an HTTP 500"
+kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"

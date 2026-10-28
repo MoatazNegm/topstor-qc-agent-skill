@@ -18,9 +18,17 @@ API="http://$CIP:$TS_PORT/api/v1"
 curl -s -m 20 -o /dev/null -X POST -G "$API/hosts/discover" --data-urlencode name=nothing --data-urlencode "token=$T"
 n=0; until etcd_get "$P" "$DIP" possible --prefix | grep -q "possible/$H"; do sleep 5; n=$((n+5)); [ $n -gt 900 ] && fail "$H not in discovery after 900 s"; done
 B=$(node_bootid "$M")
-st=$(curl -s -m 90 -X POST -G "$API/hosts/joincluster" --data-urlencode "name=$H" --data-urlencode "alias=$AL" --data-urlencode "ipaddr=$MIP" \
-	--data-urlencode "ipaddrsubnet=$BITS" --data-urlencode "token=$T" | python3 -I -c 'import sys,json;print(json.load(sys.stdin).get("joinstatus","none"))' 2>/dev/null)
-[ "$st" = acknowledged ] && ok "join $H as $AL at $MIP -> $st" || fail "join $H -> $st"
+JB=$QC_STATE/tmp/join-$M.body; JC=$(curl -s -m 90 -o "$JB" -w '%{http_code}' -X POST -G "$API/hosts/joincluster" --data-urlencode "name=$H" --data-urlencode "alias=$AL" --data-urlencode "ipaddr=$MIP" \
+	--data-urlencode "ipaddrsubnet=$BITS" --data-urlencode "token=$T"); JC=${JC:-000}
+st=$(python3 -I -c 'import sys,json;print(json.load(open(sys.argv[1])).get("joinstatus","none"))' "$JB" 2>/dev/null)
+if [ "$st" = acknowledged ]; then ok "join $H as $AL at $MIP -> $st"
+elif [ "$JC" = 000 ] || [ -z "$st" ]; then
+	# K-09: no usable answer (timeout) = the join may be running. Do NOT report a plain failure and do NOT send it twice: wait for the node's own restart first.
+	log "JOIN UNKNOWN: joincluster gave http $JC and no joinstatus (timeout?); body: $(head -c 200 "$JB" 2>/dev/null | mask)"
+	if node_wait_reboot "$M" "$B" 600; then ok "$M restarted after the join call although the reply was lost (join was running)"
+	else rm -f "$JB"; log "JOIN UNKNOWN: $M did not restart within 600 s; do NOT send joincluster again before looking at the node (hostname, discovery key) by hand"; log "JOIN FAILED"; exit 1; fi
+else fail "join $H -> http $JC joinstatus '$st' (refused)"; fi
+rm -f "$JB"
 node_wait_reboot "$M" "$B" 600 && ok "$M restarted by itself after the join" || fail "$M did not restart after the join"
 "$QC_TOOLS/cluster-settle.sh" "$M" --after-start || bad "$M did not settle after the join"
 n=0; until etcd_get "$P" "$CIP" "ready/$H" | grep -q "$MIP"; do sleep 5; n=$((n+5)); [ $n -gt 300 ] && break; done

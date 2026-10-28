@@ -4,5 +4,9 @@
 # fall back to the old branch. Default: all running cluster nodes.
 . "$(dirname "$(readlink -f "$0")")/lib/node.sh"
 TP=$(cfg get repos.node_paths.topstor /TopStor)
+BAD=0
 for n in ${@:-$(cluster_nodes)}; do [ "$(node_state "$n")" = running ] || { echo "$n: not running, skipped"; continue; }
-	echo "$n: $(node_exec "$n" "$TP/getcversion.sh \$(cat /root/getcversion)" 2>&1 | grep -v -e setlocale -e '^$' | tail -2 | tr '\n' ' ')"; done
+	o=$(node_exec "$n" "$TP/getcversion.sh \$(cat /root/getcversion)" 2>&1); rc=$?
+	o=$(echo "$o" | grep -v -e setlocale -e '^$' | tail -2 | tr '\n' ' ')
+	echo "$n: $o"; { [ $rc = 0 ] && [ -n "$o" ]; } || { echo "ERROR: getcversion failed on $n (rc $rc): cversion not refreshed" >&2; BAD=1; }; done
+exit $BAD

@@ -39,3 +39,7 @@ run() { if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: $*" >&2; else "$@"; fi; }
 
 # round_dir <round> -> absolute dir of a round under state/rounds
 round_dir() { echo "$QC_STATE/rounds/${1:?round name}"; }
+
+# valid_branch <name>: K-13 -- a branch name goes into shell strings that run on nodes ({branch} in deploy.*_command): allow only
+# git-valid names made of letters, digits, . _ / - (no spaces, no ; $ ` | & quotes).
+valid_branch() { git check-ref-format --branch "$1" >/dev/null 2>&1 || return 1; case "$1" in ""|-*|*[!A-Za-z0-9._/-]*) return 1;; esac; }

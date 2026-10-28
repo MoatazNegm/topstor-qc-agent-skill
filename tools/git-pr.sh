@@ -4,7 +4,9 @@
 # iteration passed with no code change since the last fix (FORCE_PR is not offered). An existing PR for the same head is reported,
 # not duplicated. Prints one PR URL per repo.
 . "$(dirname "$(readlink -f "$0")")/lib/git.sh"
-BR=${1:?branch}; shift; TITLE="TopStor QC: $BR (one full QualityCheck iteration passed with no code change)"; BODY=
+BR=${1:?branch}; shift
+valid_branch "$BR" || die "bad branch name '$BR' (letters, digits, . _ / - only)"
+TITLE="TopStor QC: $BR (one full QualityCheck iteration passed with no code change)"; BODY=
 while [ $# -gt 0 ]; do case $1 in --title) TITLE=$2; shift;; --body-file) BODY=$2; shift;; esac; shift; done
 "$QC_TOOLS/loop-state.sh" is-clean || die "no clean full iteration yet: pull requests are opened only after one"
 OWN=$(cfg get repos.user_owner); BASE=$(cfg get repos.upstream.base_branch)

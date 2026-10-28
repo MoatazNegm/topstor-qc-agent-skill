@@ -197,6 +197,12 @@ def validate(c):
     need_file("platform.tester_key_file")
     if dig(c, "platform.admin_key_file"):
         warns.append("platform.admin_key_file is set: it is NEVER used for step results (sheet text changes only, after validation)")
+    ss = dig(c, "cluster.settle_seconds")
+    if ss not in (None, ""):
+        if not re.match(r"^[0-9]+$", str(ss).strip()):
+            errs.append("cluster.settle_seconds: must be a whole number of seconds (got %r)" % (ss,))
+        elif int(str(ss).strip()) < 300:
+            warns.append("cluster.settle_seconds is %s: the rule is a REAL settle of 300 s after every node start/return and before every stop" % ss)
     fl = need("cluster.flavour")
     if fl and fl not in ("container", "physical"):
         errs.append("cluster.flavour: must be container or physical")

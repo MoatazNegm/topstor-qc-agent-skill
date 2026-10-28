@@ -29,8 +29,11 @@ if [ -n "$R" ]; then L=$R/run.log; M=$QC_STATE/tmp/.snap.$(basename "$R")
 fi
 B=$(ls -t "$QC_STATE"/builds/*/status 2>/dev/null | head -1); [ -n "$B" ] && echo "build $(basename "$(dirname "$B")"): $(tail -1 "$B" | cut -c1-200)"
 "$QC_TOOLS/node-status" 2>/dev/null | sed 's/^/node /'
-P=$(primary_of 1); if [ -n "$P" ] && [ "$(node_state "$P")" = running ]; then
+# K-11: probe the first RUNNING node of every cluster (the primary may be stopped in a takeover test; cluster 2 exists in replication tests)
+for CLN in $(cfg nodes | while read -r x; do cfgn "$x" cluster 1; done | sort -u); do P=
+	for x in $(cluster_nodes "$CLN"); do [ "$(node_state "$x")" = running ] && { P=$x; break; }; done
+	if [ -z "$P" ]; then echo "pools (cluster $CLN): no running node to probe"; continue; fi
 	node_exec "$P" 'timeout 15 zpool list -H -o name,health' > "$QC_STATE/tmp/zp" 2>&1; rc=$?
-	[ $rc = 124 ] && echo "ZPOOL DOES NOT ANSWER (rc 124) on $P: report to the user at once" || echo "pools: $(grep -v setlocale "$QC_STATE/tmp/zp" | tr '\n' ' ' | tr '\t' ':')"
+	[ $rc = 124 ] && echo "ZPOOL DOES NOT ANSWER (rc 124) on $P (cluster $CLN): report to the user at once" || echo "pools (cluster $CLN, via $P): $(grep -v setlocale "$QC_STATE/tmp/zp" | tr '\n' ' ' | tr '\t' ':')"
 	grep -q SUSPENDED "$QC_STATE/tmp/zp" && echo "SUSPENDED POOL: report to the user at once"
-fi
+done

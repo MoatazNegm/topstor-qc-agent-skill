@@ -6,7 +6,8 @@
 # rc 0 = settled and in sync, 1 = not in sync / not reachable, 2 = setup stalled (log silent 240 s).
 . "$(dirname "$(readlink -f "$0")")/lib/tstor.sh"
 N=${1:?node}; shift; AFTER=0; NOSYNC=0; S=$(cfg get cluster.settle_seconds 300)
-while [ $# -gt 0 ]; do case $1 in --after-start) AFTER=1;; --no-sync) NOSYNC=1;; --settle) S=$2; shift;; esac; shift; done
+while [ $# -gt 0 ]; do case $1 in --after-start) AFTER=1;; --no-sync) NOSYNC=1;; --settle) S=$2; shift;; *) die "unknown option $1";; esac; shift; done
+case "$S" in ""|*[!0-9]*) die "settle seconds must be a whole number (got '$S')";; esac; S=$((10#$S))
 CL=$(cfgn "$N" cluster 1); CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip)
 [ -n "${DRYRUN:-}" ] && { echo "DRYRUN: settle $N (after-start=$AFTER) ${S}s, isinsync on $CIP"; exit 0; }
 T0=$SECONDS

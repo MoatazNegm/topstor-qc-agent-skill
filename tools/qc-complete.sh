@@ -4,5 +4,6 @@
 . "$(dirname "$(readlink -f "$0")")/lib/qc.sh"
 R=${1:?round}; T=${2:?test id}; A=${3:?complete|end}; case $A in complete|end) ;; *) die "complete or end";; esac
 [ -n "${DRYRUN:-}" ] && { echo "DRYRUN: POST tests/$T/$A"; exit 0; }
-O=$(qc_curl "tests/$T/$A" -X POST | mask | cut -c1-300)
-"$QC_TOOLS/log.sh" "$R" NOTE "platform tests/$T/$A -> $O" >/dev/null; echo "$O"
+B=$(mktemp "$QC_STATE/tmp/c.XXXXXX"); CODE=$(qc_curl "tests/$T/$A" -X POST -o "$B" -w '%{http_code}'); O=$(mask < "$B" | cut -c1-300); rm -f "$B"
+"$QC_TOOLS/log.sh" "$R" NOTE "platform tests/$T/$A -> http $CODE $O" >/dev/null; echo "http $CODE $O"
+case "$CODE" in 2??) ;; *) echo "ERROR: platform did not accept tests/$T/$A (http ${CODE:-none}); tell the supervisor, no retry loop" >&2; exit 1;; esac

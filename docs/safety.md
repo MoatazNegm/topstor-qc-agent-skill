@@ -25,7 +25,7 @@ suspended pools). They apply to every flavour; the container-flavour items matte
   has a pool imported over its sessions suspends that pool. The guard refuses (rc 5): stop the other node / move the pool first, and
   stop the holder last. Pick the stop order by holder before the stage starts.
 - NEVER log out iSCSI sessions while any node has a pool imported (find the owner first; in the container flavour `zpool list`
-  shows the pools of every node). The only logout is the one built into `cluster-stopnode.sh` (own target, own pools exported).
+  shows the pools of every node). The logouts that exist are all guarded by "no pool imported": the one in `cluster-stopnode.sh` (own target, own pools exported), the global one in `cluster-build-repl.sh`, the clean-ups `host-kernelclean.sh`, `iscsi-stale-clean.sh` and `host-stale-clean.sh`, and `repl-iscsi-cross.sh`, which refuses (rc 5) to log out and re-ACL a target the iscsid holder already has a session to while any pool is imported (a first login with no session is allowed).
 - Never run `iscsiadm` on a container host: it socket-activates a host iscsid that steals the initiator from the nodes (recovery:
   stop the host iscsid and its socket unit; the node's guardian starts its own again).
 - Never `docker kill` / `docker rm -f` a node that owns an imported pool; never detach or delete a disk of an imported pool (offline

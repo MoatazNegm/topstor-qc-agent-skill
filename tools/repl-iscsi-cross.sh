@@ -15,6 +15,13 @@ for p in "$@"; do n=${p%%:*}; ip=${p#*:}; [ "$ip" = "$p" ] && ip=$(cfgn "$n" hos
 	# enforced guard: re-logging the target of a node that owns an imported pool suspends that pool
 	[ -z "$(pools_owned "$n")" ] || die "REFUSED: $n owns an imported pool ($(pools_owned "$n" | tr '\n' ' ')): never run this for the owner of an imported pool"
 	hn=$(node_exec "$n" hostname | tr -d '\r\n'); iqn=iqn.2016-03.com.$hn:t1
+	# K-01: the logout + ACL delete below end the holder's live session to $iqn. In the container flavour every pool of the shared kernel
+	# runs over the holder's sessions, so with a session to this target AND any pool imported anywhere the logout could pull a vdev
+	# out from under another node's pool: refuse. No session yet = the logout/ACL delete touch nothing = login-only path allowed.
+	if node_exec "$OWN" 'iscsiadm -m session' 2>/dev/null | grep -qF "$iqn"; then
+		zpool_answers "$OWN" || { echo "REFUSED: zpool does not answer on $OWN (possible SUSPENDED pool); touch nothing, report at once" >&2; exit 5; }
+		[ -z "$(pools_on "$OWN")" ] || { echo "REFUSED: $OWN already has a session to $iqn and pool(s) are imported ($(pools_on "$OWN" | tr '\n' ' ')): the logout would pull disks from under a pool. Export the pools first (cluster-stopnode.sh) or skip this node" >&2; exit 5; }
+	fi
 	node_exec "$OWN" "iscsiadm -m discovery --portal $ip:3266 --type sendtargets" >/dev/null 2>&1
 	node_exec "$OWN" "iscsiadm -m node --targetname $iqn --portal $ip:3266 -u" >/dev/null 2>&1
 	node_exec "$n" "targetcli /iscsi/$iqn/tpg1/acls delete $INI" >/dev/null 2>&1

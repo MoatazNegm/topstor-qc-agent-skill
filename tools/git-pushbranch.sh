@@ -4,6 +4,7 @@
 # three say "pushed, remote has the same commit". Push only on a product change (never for harness/tool changes).
 . "$(dirname "$(readlink -f "$0")")/lib/git.sh"
 BR=${1:?branch}; bad=0
+valid_branch "$BR" || die "bad branch name '$BR' (letters, digits, . _ / - only)"
 for r in $REPOS; do u=$(repo_url "$r")
 	[ "$(g "$r" branch --show-current)" = "$BR" ] || { echo "$r: clone is not on $BR"; bad=1; continue; }
 	[ -z "$(g "$r" status --porcelain)" ] || { echo "$r: uncommitted changes: commit them first"; bad=1; continue; }

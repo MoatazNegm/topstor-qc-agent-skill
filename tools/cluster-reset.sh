@@ -6,8 +6,13 @@
 # Progress: state/builds/build<build>/status, last line "DONE: ..." or "STOP: ...".
 . "$(dirname "$(readlink -f "$0")")/lib/tstor.sh"
 BUILD=${1:?build number}; shift; CL=1; SINGLE=0; NODISKS=0
-while [ $# -gt 0 ]; do case $1 in --cluster) CL=$2; shift;; --single) SINGLE=1;; --no-disks) NODISKS=1;; esac; shift; done
-S=$QC_STATE/builds/build$BUILD; mkdir -p "$S"; : > "$S/status"
+while [ $# -gt 0 ]; do case $1 in --cluster) CL=$2; shift;; --single) SINGLE=1;; --no-disks) NODISKS=1;; *) die "unknown option $1";; esac; shift; done
+S=$QC_STATE/builds/build$BUILD; mkdir -p "$S" "$QC_STATE/builds"
+# K-04: never a second build at once, never wipe the status of a build that has not ended (restart it only on purpose: QC_BUILD_RESTART=1)
+if [ -z "${QC_BUILD_LOCKED:-}" ]; then exec 9>"$QC_STATE/builds/.lock"; flock -n 9 || { echo "REFUSED: another build is running (lock $QC_STATE/builds/.lock); let it finish, read its status file" >&2; exit 5; }; export QC_BUILD_LOCKED=1; fi
+if [ -z "${DRYRUN:-}" ] && [ -s "$S/status" ] && ! tail -n1 "$S/status" | grep -qE '(DONE|STOP):' && [ -z "${QC_BUILD_RESTART:-}" ]; then
+	echo "REFUSED: build$BUILD has a status that did not end with DONE/STOP: $(tail -n1 "$S/status" | cut -c1-100). Resume from it; QC_BUILD_RESTART=1 starts it over on purpose" >&2; exit 5; fi
+: > "$S/status"
 st() { echo "$(date +%T) $*" | mask | tee -a "$S/status"; }; stop() { st "STOP: $*"; exit 1; }
 FL=$(cfg get cluster.flavour); P=$(primary_of "$CL"); [ -n "$P" ] || stop "cluster $CL has no primary"
 CIP=$([ "$CL" = 2 ] && cfg get cluster.second_cluster_ip || cfg get cluster.cluster_ip); FB=$(cfg get cluster.first_boot_ip)
