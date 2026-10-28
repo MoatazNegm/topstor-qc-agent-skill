@@ -34,7 +34,7 @@ Run `tools/supervisor-snapshot.sh`, then post a few lines:
 - Nothing changed for `loop.stuck_after_reports` (2) reports in a row, or no test process runs while the platform has an active
   test: nudge (`tools/mailbox.sh send supervisor <agent> "<question>"`).
 - No answer after one more report: stop that agent and start a NEW one of the same role whose prompt says "this is a RESUME: read
-  `state/rounds/<round>/RESUME.md`, `run.log`, the build status; let a running build finish, never start a second build, never
+  `state/rounds/<round>/RESUME.md`, `run.log`, the build status; let a running build finish, never start a second build (a build killed by a restart is restarted only with `QC_BUILD_RESTART=1`, after checking no build process runs), never
   resubmit a step the ledger lists". Never do the stuck agent's job yourself.
 - Answer an agent's question yourself when the rules decide it (which node to stop first, rebuild or restart). Ask the user only
   for what the rules do not decide (credentials, destructive actions outside the test environment, a reboot without a logged request and evidence,

@@ -19,7 +19,7 @@ Base URL = `platform.url` (e.g. `https://quality-check-omega.vercel.app/api`). T
 | `GET /tests/active` | `qc-api.sh active` | `{"activeTest":{id,name,steps:[{id,step_number,description,success_symptom,points,on_failure}]}}`; testers only get their current loop test |
 | `GET /tests/{id}` | `qc-dltest.sh <id>` | the FULL sheet; saved to `state/tests/test<id>.json/.txt` |
 | `GET /tests?appId=<id or all>` | `qc-api.sh tests` | assigned tests (`isActive`, `locked`, `completed`); used for the iteration list |
-| `GET /test-results/{testId}/next` | `qc-api.sh next <id>` | next unattempted step; 404 = none left |
+| `GET /test-results/{testId}/next` | `qc-api.sh next <id>` | next unattempted step. `200 {step:{id,step_number,description,success_symptom,points,...}, test_id, test_name}`; `404 {error:"No more steps", allDone:true}` = none left (qc-submit.sh refuses to submit then, rc 3) |
 | `POST /test-results/{testId}/steps/{stepId}` | `qc-submit.sh` | JSON `{"result":"pass|fail","comment":"..."}` or multipart `result`, `comment`, `configFile=@All_Configs.zip`; reply `{result, pointsAwarded, autoEnded, warning, ...}` |
 | `POST /tests/{testId}/complete` | `qc-complete.sh <round> <id> complete` | all steps answered: advance the loop to the next test |
 | `POST /tests/{testId}/end` | `qc-complete.sh <round> <id> end` | after a hard stop the platform did not end itself |

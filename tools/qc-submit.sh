@@ -29,7 +29,11 @@ ok=0; for i in 1 2 3 4 5 6; do o=$(qc_code tests/active); c=${o% *}; t=${o#* }; 
 [ $ok = 1 ] || stop 6 "platform unhealthy for 3 minutes; nothing was sent"
 # K-02: the platform must name THIS step as the next one (a replacement agent or a second round of the same test must not submit a stored step again).
 # The id is read from the reply of GET test-results/<T>/next (fields id | step_id | step.id | nextStep.id); an unreadable reply is a NOTE only (the history check below still proves one row).
-NXJ=$(qc_get "test-results/$T/next"); NX=$(echo "$NXJ" | python3 -I -c 'import sys,json
+NXJ=$(qc_get "test-results/$T/next"); # real shape (platform OpenAPI): 200 {"step":{"id",...},"test_id","test_name"}; 404 {"error":"No more steps","allDone":true} = every step answered.
+if echo "$NXJ" | python3 -I -c 'import sys,json
+d=json.load(sys.stdin);sys.exit(0 if isinstance(d,dict) and (d.get("allDone") is True or d.get("error")=="No more steps") else 1)' 2>/dev/null; then
+	stop 3 "platform says every step of test $T is answered (allDone): nothing sent"; fi
+NX=$(echo "$NXJ" | python3 -I -c 'import sys,json
 try: d=json.load(sys.stdin)
 except Exception: sys.exit()
 for k in ("id","step_id"):
@@ -53,20 +57,22 @@ if [ "$MODE" = --config ]; then
 	else echo " (configuration files could not be downloaded from the cluster; submitted without them)" >> "$W/comment"; fi
 fi
 if [ -n "$ZIP" ]; then
-	O=$(qc_curl "test-results/$T/steps/$S" -m 180 -X POST -F "result=$RES" -F "comment=<$W/comment" -F "configFile=@$ZIP;filename=All_Configs.zip")
+	O=$(qc_curl "test-results/$T/steps/$S" -m 180 -w '\n__HTTP__%{http_code}' -X POST -F "result=$RES" -F "comment=<$W/comment" -F "configFile=@$ZIP;filename=All_Configs.zip")
 else
 	python3 -I -c 'import json,sys;print(json.dumps({"result":sys.argv[1],"comment":open(sys.argv[2]).read()}))' "$RES" "$W/comment" > "$W/body.json"
-	O=$(qc_curl "test-results/$T/steps/$S" -X POST -H "Content-Type: application/json" -d @"$W/body.json")
+	O=$(qc_curl "test-results/$T/steps/$S" -w '\n__HTTP__%{http_code}' -X POST -H "Content-Type: application/json" -d @"$W/body.json")
 fi
 NOW=$(date +%s)
+HC=${O##*__HTTP__}; O=${O%$'\n'__HTTP__*}; case $HC in [0-9][0-9][0-9]) ;; *) HC=000; esac
 if [ -z "$(echo "$O" | tr -d '[:space:]')" ]; then
 	sleep 20; read -r H1 _ <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"
 	[ "$H1" = $((H0+1)) ] && O="{\"result\":\"$RES\",\"note\":\"empty reply but history shows the row\"}" || stop 2 "UNKNOWN: empty reply/timeout and no new history row yet (rows $H0 -> $H1); NOT retried -- decide by hand"
 fi
 if ! echo "$O" | grep -qi "\"result\": *\"$RES\""; then
+	# L-06: only a 4xx with a JSON "error" is a rejection (a success reply also carries "message"); L-06 http code in $HC.
 	# K-03: a reply without the result (HTML 502/504, cut body) may still have stored the step: look at the history before calling it rejected
-	if echo "$O" | python3 -I -c 'import sys,json;d=json.load(sys.stdin);sys.exit(0 if isinstance(d,dict) and (d.get("error") or d.get("message")) else 1)' 2>/dev/null; then
-		stop 1 "rejected: $(echo "$O" | cut -c1-300)"; fi
+	if echo "$O" | python3 -I -c 'import sys,json;d=json.load(sys.stdin);sys.exit(0 if isinstance(d,dict) and d.get("error") else 1)' 2>/dev/null && case $HC in 4??) true;; *) false;; esac; then
+		stop 1 "rejected (http $HC): $(echo "$O" | cut -c1-300)"; fi
 	sleep 20; read -r H1 _ <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"
 	if [ "$H1" = $((H0+1)) ]; then echo "$(date +%T) NOTE reply was not the expected result JSON but the history shows the row: $(echo "$O" | tr -d '\n' | cut -c1-80)" >> "$L"; O="{\"result\":\"$RES\"}"
 	else stop 2 "UNKNOWN: reply without the result ($(echo "$O" | tr -d '\n' | cut -c1-120)) and no new history row (rows $H0 -> $H1); NOT retried -- decide by hand"; fi

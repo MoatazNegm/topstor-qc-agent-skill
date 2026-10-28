@@ -8,10 +8,9 @@ NS=${@:-$(cluster_nodes)}; names=""
 # enforced guard: never while a pool is imported (a stale-looking record may be the session a pool is running on)
 for c in $NS; do [ "$(node_state "$c")" = running ] || continue; [ -z "$(pools_on "$c")" ] || die "REFUSED: pool(s) imported ($(pools_on "$c" | tr '\n' ' ')): run this between builds, with no pool imported"; done
 # K-07: "current" targets = EVERY configured cluster node (also stopped ones and nodes not given as arguments); the host name is read from the
-# running node, else from the config (hostname:, or alias:). A configured node whose name cannot be found = refuse (nothing may be deleted blind).
+# running node. A configured node that is not running = refuse (L-04: the name is per build, never the alias; nothing may be deleted blind).
 for c in $(cluster_nodes); do h=; [ "$(node_state "$c")" = running ] && h=$(node_exec "$c" hostname 2>/dev/null | tr -d '\r\n')
-	[ -n "$h" ] || h=$(cfgn "$c" hostname); [ -n "$h" ] || h=$(cfgn "$c" alias)
-	[ -n "$h" ] || die "REFUSED: cannot find the host name of configured node $c (not running, no hostname:/alias: in the config); start it or add hostname: to its config entry"
+	[ -n "$h" ] || die "REFUSED: cannot read the host name of configured node $c (not running): start it first, or run this tool at the build start"
 	names="$names iqn.2016-03.com.$h:t1"; done
 c1=$(echo $NS | cut -d' ' -f1)
 if [ "$(cfg get cluster.flavour)" = container ]; then

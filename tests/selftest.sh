@@ -171,7 +171,7 @@ exec) shift; shift; cmd="$*"
 	hostname*|*"sh -c hostname"*) echo hostn; exit 0;;
 	*cpoolowner*) exit 0;;
 	*"iscsiadm -m session"*) [ -n "$FAKE_SESSION" ] && echo "tcp: [1] 10.0.0.212:3266,1 iqn.2016-03.com.hostn:t1 (non-flash)"; exit 0;;
-	*"zpool list"*) [ -n "$FAKE_POOL" ] && echo "$FAKE_POOL"; exit 0;;
+	*"zpool list"*) [ -n "$FAKE_ZFAIL" ] && exit 124; [ -n "$FAKE_POOL" ] && echo "$FAKE_POOL"; exit 0;;
 	*) echo "$cmd" >> "$FAKE_LOG"; exit 0;;
 	esac;;
 esac
@@ -183,6 +183,12 @@ FAKE_LOG=$T/k01.log; : > "$FAKE_LOG"; export FAKE_LOG
 QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_SESSION=1 FAKE_POOL=tank "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck "$?$(grep -c 'REFUSED' "$T/k01.out")$(grep -c 'iscsiadm -m node' "$FAKE_LOG")" 510 "K-01 repl-iscsi-cross refuses a logout while a pool is imported and the holder has a session"
 : > "$FAKE_LOG"; QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_POOL=tank "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck "$?$(grep -c 'iscsiadm -m node.* -u' "$FAKE_LOG")" 01 "K-01 no session to the target yet: login-only path allowed with a pool imported (logout is a no-op there)"
 : > "$FAKE_LOG"; QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" OWN=d1 FAKE_SESSION=1 "$TL/repl-iscsi-cross.sh" d2 > "$T/k01.out" 2>&1; ck $? 0 "K-01 session but no pool imported: allowed"
+# L-01/L-02: ts-disk-remove sources its lib, refuses while a pool is imported (rc 5), reports a hung zpool (rc 3), passes on an idle lab
+QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" DRYRUN=1 "$TL/ts-disk-remove.sh" loop99 > "$T/l01.out" 2>&1; ck "$?$(grep -c 'command not found' "$T/l01.out")" 00 "L-01 ts-disk-remove idle lab passes (no missing function)"
+QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" FAKE_POOL=tank "$TL/ts-disk-remove.sh" loop99 > "$T/l01.out" 2>&1; ck "$?$(grep -c 'REFUSED' "$T/l01.out")" 51 "L-02 ts-disk-remove refused while a pool is imported"
+QC_CONFIG=$T/dry.yaml PATH="$T/dshim:$PATH" FAKE_ZFAIL=1 "$TL/ts-disk-remove.sh" loop99 > "$T/l01.out" 2>&1; ck "$?$(grep -c 'does not answer' "$T/l01.out")" 31 "L-01 ts-disk-remove reports a hung zpool (rc 3)"
+# L-04: iscsi-stale-clean refuses when a configured node is not running (no alias fallback)
+QC_CONFIG=$T/dry.yaml "$TL/iscsi-stale-clean.sh" > "$T/l04.out" 2>&1; ck "$(grep -c 'cannot read the host name' "$T/l04.out")" 1 "L-04 iscsi-stale-clean refuses without a readable node name"
 # K-13: branch names with shell metacharacters are refused before anything runs
 for bad in 'x;touch /tmp/pwn' 'a b' '$(id)' '-x'; do QC_CONFIG=$T/dry.yaml DRYRUN=1 "$TL/code-deploy.sh" "$bad" > "$T/k13.out" 2>&1; ck "$?$(grep -c 'bad branch name' "$T/k13.out")" 11 "K-13 code-deploy refuses branch '$bad'"; done
 QC_CONFIG=$T/dry.yaml "$TL/git-newbranch.sh" 'x;id' > "$T/k13.out" 2>&1; ck "$?$(grep -c 'bad branch name' "$T/k13.out")" 11 "K-13 git-newbranch refuses a bad branch name"
@@ -214,12 +220,15 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/tests/active"): self._s(200,"{}")
         elif p.startswith("/api/test-results/summary"): self._s(200,'{"monthEarned":0}')
         elif p.startswith("/api/test-results/history"): self._s(200,"[]")
-        elif p.startswith("/api/test-results/5/next"): self._s(200,'{"id":99,"step_number":3}')
+        elif p.startswith("/api/test-results/5/next"): self._s(200,'{"step":{"id":99,"step_number":3},"test_id":5,"test_name":"x"}')
+        elif p.startswith("/api/test-results/8/next"): self._s(404,'{"error":"No more steps","allDone":true}')
+        elif p.startswith("/api/test-results/9/next"): self._s(200,'{"step":{"id":7,"step_number":1},"test_id":9,"test_name":"x"}')
         elif p.startswith("/api/tests/6"): self._s(200,'{"error":"not found"}')
         else: self._s(404,"{}")
     def do_POST(self):
         n=int(self.headers.get("Content-Length") or 0); self.rfile.read(n)
         if "/complete" in self.path: self._s(500,'{"error":"boom"}')
+        elif "/test-results/9/steps/7" in self.path: self._s(200,'{"message":"Result submitted successfully","pointsAwarded":0}')
         else: self._s(200,"{}")
 HTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()
 PY
@@ -227,6 +236,10 @@ PORT=$((20000+RANDOM%20000)); python3 -I "$T/plat/srv.py" $PORT & SRV=$!; sleep 
 sed "s#https://qc.example.invalid/api#http://127.0.0.1:$PORT/api#" "$T/input.yaml" > "$T/plat.yaml"
 mkdir -p "$T/state/rounds/b5i1"; date -u +%Y-%m-%dT%H:%M:%S > "$T/state/rounds/b5i1/startts"; echo c > "$T/pc"
 QC_CONFIG=$T/plat.yaml "$TL/qc-submit.sh" b5i1 5 7 pass "$T/pc" > "$T/k02.out" 2>&1; ck "$?$(grep -c 'next step of test 5 is 99' "$T/state/rounds/b5i1/run.log" 2>/dev/null)" 31 "K-02 submit refused when the platform's next step is another step (nothing sent)"
+# L-03: allDone reply = nothing sent, rc 3
+QC_CONFIG=$T/plat.yaml "$TL/qc-submit.sh" b5i1 8 1 pass "$T/pc" > "$T/l03.out" 2>&1; ck "$?$(grep -c 'allDone' "$T/state/rounds/b5i1/run.log" 2>/dev/null)" 31 "L-03 submit refused when the platform says allDone (rc 3)"
+# L-06: a 200 success reply with "message" but no "result" is not called a rejection (falls to the history check, here UNKNOWN rc 2)
+QC_CONFIG=$T/plat.yaml "$TL/qc-submit.sh" b5i1 9 7 pass "$T/pc" > "$T/l06.out" 2>&1; ck "$?$(grep -c 'rejected' "$T/l06.out")" 20 "L-06 200 reply with message and no result is not read as a rejection"
 QC_CONFIG=$T/plat.yaml "$TL/qc-dltest.sh" 6 > "$T/k10.out" 2>&1; ck $? 1 "K-10 qc-dltest refuses a reply without steps"
 [ ! -e "$T/state/tests/test6.json" ]; ck $? 0 "K-10 qc-dltest keeps no file for a reply without steps"
 QC_CONFIG=$T/plat.yaml "$TL/qc-complete.sh" b5i1 5 complete > "$T/k10.out" 2>&1; ck "$?$(grep -q 'http 500' "$T/k10.out" && echo 1)" 11 "K-10 qc-complete exits non-zero on an HTTP 500"

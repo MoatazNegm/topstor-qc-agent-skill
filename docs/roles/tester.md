@@ -12,6 +12,8 @@ with a DONE line, then stop.
 1. `tools/preflight.sh` (rc 2: stop and report the missing config fields).
 2. New test: `R=$(tools/round-new.sh <test> <iteration>)`; RESUME: read `state/rounds/<round>/RESUME.md`, `run.log`, the build status,
    the ledger `state/ledger/<round>.sent`; let a running build finish; never start a second build.
+   If a restart killed the build (lock free, status not DONE/STOP, no `docker_setup` running in the nodes) the build tools answer REFUSED rc 5:
+   then `QC_BUILD_RESTART=1 tools/cluster-reset.sh <N> ...` starts it over on purpose; log it in `run.log`.
 3. Read ALL steps (`state/rounds/$R/steps.txt`). Plan which nodes, clusters, disks and clients the test needs and the stop order
    (iSCSI initiator holder last).
 4. Stop every cluster node with `tools/cluster-stopnode.sh` (`FORCE_DEGRADED=1` only for a leftover degraded pool). Container

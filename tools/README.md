@@ -52,4 +52,6 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `client-mount-check.sh` | client-mount-check.sh   stat-probe NFS/CIFS mounts on client nodes, rc 1 on a stale one | new (stale mount check) |
 | `qc-local.sh` | qc-local.sh <test> list|<step> pass|fail [text]   local re-run record, never submits | qclocal.sh |
 
+Build restart: `cluster-reset.sh` / `cluster-build-repl.sh` answer REFUSED (rc 5) when `build<N>/status` did not end with DONE/STOP (e.g. the build was killed by a restart). After checking that no build process runs (lock free, no `docker_setup` in the nodes) restart on purpose with `QC_BUILD_RESTART=1 tools/cluster-reset.sh <N> ...` and log it in `run.log`.
+
 Libraries (sourced, not run): `lib/common.sh` (config, state dir, `mask`, `secret_tmp`, `run`), `lib/cfg.py` (YAML subset reader + validator), `lib/node.sh` + `lib/nodetype/{container,physical,virtualbox,ssh}.sh` (node abstraction), `lib/tstor.sh` (TopStor API: login from a password file, isinsync, etcd reads, pools), `lib/qc.sh` (platform calls with the key from its file), `lib/git.sh` (git and GitHub API with the credential file).
