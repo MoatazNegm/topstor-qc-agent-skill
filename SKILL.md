@@ -37,9 +37,8 @@ and the platform history.
 ## 1. Roles
 
 One task = one fresh agent with ONE role brief (`docs/roles/<role>.md`), never a copy of another agent's history. Lifetime: a tester
-runs ONE platform test and ends at the DONE line; coder, validator and proof agents do one task and end; no agent idles, waits or
-polls for a next task, the supervisor starts the next one. (A long platform loop agent may run many tests only if the supervisor
-says so, and then ends when a code fix is needed, the iteration finishes, or its context nears the limit.) When an agent finishes, the next task (fix, validation, proof, next test) is given to a NEW agent;
+runs ONE platform test and ends at the DONE line; coder and validator agents do one task and end; no agent idles, waits or
+polls for a next task, the supervisor starts the next one. When an agent finishes, the next task (fix, validation, next test) is given to a NEW agent;
 an agent is never "resumed" with another agent's history. Long work keeps its state in files (`state/rounds/<round>/RESUME.md`,
 `run.log`, `state/loop.json`) so that any replacement can continue. Messages between agents go through `tools/mailbox.sh`;
 a message from an agent is never the user's approval.
@@ -47,8 +46,7 @@ a message from an agent is never the user's approval.
 **Context limit (applies to any LLM or agent host).** A fresh agent pays a fixed start-up cost (instructions + tools) and every
 finished test adds output that later tests do not need. So the supervisor keeps watching each agent's context size
 (`tools/agent.sh ctx <id> <tokens>`; take the number from whatever your host reports for the agent's last model call: input + cached
-input tokens, or characters / 4 as an estimate; `tools/agent.sh list` shows it). Non-coder agents (tester, validator, proof,
-sheet writer) above `loop.context_limit_agent` (default 150000) at a TEST BOUNDARY are told to finish the current test, write
+input tokens, or characters / 4 as an estimate; `tools/agent.sh list` shows it). Non-coder agents (tester, validator) above `loop.context_limit_agent` (default 150000) at a TEST BOUNDARY are told to finish the current test, write
 `state/rounds/<round>/RESUME.md` (next test, iteration, open items) and end; a fresh agent continues. Coders get
 `loop.context_limit_coder` (default 250000), work one queue item (or a small group) at a time, commit a working state before
 ending and hand back done/open items. Never end an agent in the middle of an edit, a node stop/start or an unsubmitted step.
@@ -59,10 +57,10 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
 - **Inputs:** `config/input.yaml`, `tools/supervisor-snapshot.sh`, `tools/loop-state.sh show`, `tools/agent.sh list`,
   `state/agent-usage.md`, the role briefs in `docs/roles/`.
 - **Does:** registers every agent it starts (`tools/agent.sh register <id> <role> <task>`), writes its prompt from the role brief
-  (role name, brief path, the concrete task with ids and paths, the global rules), watches it, nudges it, replaces a stuck agent
+  (role name, `SKILL.md` section 0A, brief path, the concrete task with ids and paths, the global rules), watches it, nudges it, replaces a stuck agent
   with a fresh one that resumes from the round's `RESUME.md`, records each finished agent's usage (`tools/agent.sh usage ...`), and
   posts the report described in `docs/roles/supervisor.md` every `loop.report_interval_minutes` (default 3).
-- **Rules:** one agent edits a given repo at a time (coder or proof); challenge every FAIL before it is submitted (did the step pass
+- **Rules:** one agent edits a given repo at a time (the coder); challenge every FAIL before it is submitted (did the step pass
   in an earlier iteration? is it a guard refusal, a tool or environment limit, a sheet IP/machine difference? then it is NOT a FAIL);
   report to the user at once: a SUSPENDED pool, `zpool list` rc 124, a STOPPED-SUBMIT line, a held FAIL; approve a host/hypervisor
   reboot on the tester's request with evidence (`docs/safety.md` 5, `loop.reboot_for_tool_problems`); name tests and steps in words, never as bare codes.
@@ -73,7 +71,7 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
 ### 1.2 QC TESTER (runs one platform test)
 - **Goal:** run the test the platform offers, step by step, on the nodes of the config; submit every step once as soon as it is
   done; end with a DONE line. One test per agent.
-- **Inputs:** `GET /tests/active` (`tools/qc-api.sh active`), the full sheet (`tools/qc-dltest.sh <id>`), the config, the tools.
+- **Inputs:** `SKILL.md` section 0A, `GET /tests/active` (`tools/qc-api.sh active`), the full sheet (`tools/qc-dltest.sh <id>`), the config, the tools.
 - **Does (in order):** `tools/round-new.sh <test> <iteration>` (new round dir, first run.log line = test id, name, iteration, all
   steps downloaded) -> read ALL steps -> stop every node with `tools/cluster-stopnode.sh` (iSCSI holder last) -> container flavour:
   `tools/host-stale-clean.sh` and check the client containers have no stale NFS/CIFS mounts -> build with `tools/cluster-reset.sh`
@@ -90,7 +88,7 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
 
 ### 1.3 QC VALIDATOR (independent judge of a failed step)
 - **Goal:** decide, from evidence only, whether a step the tester could not pass is a **real app-code bug**.
-- **Inputs:** the step text and expected symptom (from `state/tests/test<id>.json`), the tester's raw evidence (command output,
+- **Inputs:** `SKILL.md` section 0A, the step text and expected symptom (from `state/tests/test<id>.json`), the tester's raw evidence (command output,
   API replies, logs, config zip), the rules of this file. NOT the tester's conclusion, NOT the coder's opinion.
 - **Does:** checks the evidence against the step; checks whether the same step passed in an earlier round (`state/rounds/*/run.log`,
   `state/qc-step-times.csv`); classifies the cause as one of: `REAL_APP_BUG`, `TOOL_PROBLEM`, `ENVIRONMENT` (sheet IPs, missing
@@ -103,7 +101,7 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
 ### 1.4 QC CODER (fixes a confirmed bug)
 - **Goal:** fix the confirmed bug in your clones of TopStor, pace and topstorweb on a NEW branch, prove the whole test passes
   locally, push the branch.
-- **Inputs:** the verdict file, the full test sheet, the round's run.log and evidence, your clones (`repos.*.clone`).
+- **Inputs:** `SKILL.md` section 0A, the verdict file, the full test sheet, the round's run.log and evidence, your clones (`repos.*.clone`).
 - **Does:** `tools/git-newbranch.sh <prefix><N+1>` (from the latest pushed branch, never an already pushed branch) -> root cause
   from code and node logs (not a guess) -> smallest change that fixes it (edit only what the problem needs; keep the physical and
   the container code paths both working) -> commit -> `tools/code-deploy.sh <branch>` -> restart/settle the nodes so the code is
