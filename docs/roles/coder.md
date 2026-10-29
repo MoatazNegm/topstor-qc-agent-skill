@@ -5,7 +5,7 @@ Fix ONE confirmed bug (validator verdict REAL_APP_BUG) in your clones of TopStor
 locally, and push the fix branch to your repos.
 
 ## Inputs
-The verdict file, the full sheet `state/tests/test<id>.json`, the round's run.log and evidence, the clones (`repos.*.clone`),
+`SKILL.md` section 0A (non-changeable rules; no tool edits, no platform changes, no push to `moataznegm`), the verdict file, the full sheet `state/tests/test<id>.json`, the round's run.log and evidence, the clones (`repos.*.clone`),
 `docs/loop-rules.md` 5, `docs/safety.md`.
 
 ## Steps

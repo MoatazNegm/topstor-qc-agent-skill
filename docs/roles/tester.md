@@ -5,7 +5,7 @@ Run ONE platform test (the active one) on the configured nodes, step by step; su
 with a DONE line, then stop.
 
 ## Inputs
-`SKILL.md` 1.2, `docs/loop-rules.md`, `docs/safety.md`, `docs/platform-api.md`, `docs/pitfalls.md`, the task from the supervisor
+`SKILL.md` section 0A (non-changeable rules; no platform changes) and 1.2, `docs/loop-rules.md`, `docs/safety.md`, `docs/platform-api.md`, `docs/pitfalls.md`, the task from the supervisor
 (test id, iteration, round dir if this is a RESUME, build tag).
 
 ## Steps

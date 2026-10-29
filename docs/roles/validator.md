@@ -8,6 +8,7 @@ FAIL on the platform.
 - the step: `state/tests/test<id>.json` (description, success_symptom, on_failure);
 - the raw evidence: command output, API replies, node logs, the config zip, the round's run.log lines of that step;
 - earlier rounds of the same test: `state/rounds/b<test>i*/run.log`, `state/qc-step-times.csv` (did this step pass before?);
+- `SKILL.md` section 0A (non-changeable rules; a gap in the sheet or platform is reported, never a proposed platform change);
 - `docs/loop-rules.md` 4, `docs/safety.md`, `docs/pitfalls.md`.
 
 ## Steps

@@ -30,6 +30,6 @@ accidental edits. It **cannot technically stop a determined user**: whoever can 
    `verify-manifest.sh --update`. If a rule seems wrong or a tool is faulty, hold the step and tell the user (the maintainer changes the tool and runs `--update`; a local fix is allowed only if the user says holding blocks the loop, and the stamp then reads MODIFIED until a reviewed release).
 3. Submit one step at a time, only through `tools/qc-submit.sh`, once. Never call the platform's submit endpoint by hand.
 4. Never open pull requests (or push) to any `moataznegm` repository. Push only to the user's own repos.
-5. If `verify-manifest.sh` says `MODIFIED` and you did not intend it, stop and tell the user before submitting anything.
-6. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
-7. The test platform cannot be changed: never design, request or propose platform-side changes (allow-lists, new fields, server gates); integrity is an audit stamp only. Work only with the existing endpoints in `docs/platform-api.md`.
+5. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
+6. The test platform cannot be changed: never design, request or propose platform-side changes (allow-lists, new fields, server gates); integrity is an audit stamp only. Work only with the existing endpoints in `docs/platform-api.md`.
+7. If `verify-manifest.sh` says `MODIFIED` and you did not intend it, stop and tell the user before submitting anything.

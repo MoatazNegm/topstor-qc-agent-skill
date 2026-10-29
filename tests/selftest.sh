@@ -260,6 +260,9 @@ QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c"
 grep -rlE 'api\.github\.com' "$ROOT/tools" 2>/dev/null | grep -q .; ck $? 1 "no tool talks to api.github.com (no write-capable GitHub API call)"
 (cd "$ROOT" && git ls-files 2>/dev/null | grep -v 'FIXLOG' | grep -v '^tests/selftest.sh$' | xargs grep -liE 'server.side|must enforce' 2>/dev/null) | grep -q .; ck $? 1 "no tracked file claims server-side enforcement"
 QC_ACK_MODIFIED=1 DRYRUN=1 QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/emp.out" 2>&1; grep -qE ' MODIFIED\]' "$T/emp.out"; ck $? 0 "ACK with empty status stamps MODIFIED"
+grep -qE 'manifest (none|[0-9a-f]{12}) MODIFIED\]' "$T/emp.out"; ck $? 0 "ACK with empty status and empty hash stamps manifest none (W-03)"
+for r in tester coder validator; do grep -q 'SKILL.md. section 0A' "$ROOT/docs/roles/$r.md"; ck $? 0 "role $r inputs name SKILL.md section 0A (W-01)"; done
+grep -q 'section 0A' "$ROOT/docs/roles/supervisor.md"; ck $? 0 "supervisor prompt template names SKILL.md section 0A (W-01)"
 printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)

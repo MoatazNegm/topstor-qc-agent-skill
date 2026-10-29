@@ -25,7 +25,7 @@ W=$(mktemp -d "$QC_STATE/tmp/sub.XXXXXX"); trap 'rm -rf "$W"' EXIT
 mask < "$CF" | cut -c1-6000 > "$W/comment"
 [ -s "$W/comment" ] || stop 4 "empty comment: every result needs evidence (command/API call and what came back)"
 # Audit stamp (docs/integrity.md): every step comment ends with "skill vX.Y.Z manifest <12 hex> OK|MODIFIED". An AUDIT aid, not enforcement.
-SV=$(cat "$QC_ROOT/VERSION" 2>/dev/null || echo unknown); MH=$("$QC_TOOLS/verify-manifest.sh" --hash | cut -c1-12); MS=$("$QC_TOOLS/verify-manifest.sh" --status)
+SV=$(cat "$QC_ROOT/VERSION" 2>/dev/null || echo unknown); MH=$("$QC_TOOLS/verify-manifest.sh" --hash | cut -c1-12); MS=$("$QC_TOOLS/verify-manifest.sh" --status); MH=${MH:-none}
 [ "$MS" != OK ] && [ "${QC_ACK_MODIFIED:-}" != 1 ] && stop 9 "skill tree is not OK (status ${MS:-empty}: a listed file differs from MANIFEST.sha256): nothing sent; tell the user, who may set QC_ACK_MODIFIED=1 to acknowledge"
 STAMP="skill v$SV manifest $MH ${MS:-MODIFIED}"; printf '\n[%s]\n' "$STAMP" >> "$W/comment"
 if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: would submit test $T step $S $RES ${MODE} comment: $(head -c 200 "$W/comment")"; exit 0; fi
