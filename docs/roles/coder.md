@@ -11,8 +11,7 @@ The verdict file, the full sheet `state/tests/test<id>.json`, the round's run.lo
 ## Steps
 1. `tools/preflight.sh`. Make sure no other coder edits the repos (the supervisor guarantees it; check `tools/agent.sh list`).
 2. `tools/git-newbranch.sh <prefix><N+1>` (from the latest pushed branch, all three repos).
-3. Root cause from the code and the node logs; reproduce once if cheap. Decide who is wrong: the product (fix it), the tool (fix the
-   tool in this skill instead and tell the supervisor), or the environment (say so, no code change).
+3. Root cause from the code and the node logs; reproduce once if cheap. Decide who is wrong: the product (fix it), the tool (do NOT edit the skill's tools: hold and report the tool fault to the supervisor/user, who has the maintainer change the tool and run `verify-manifest.sh --update`), or the environment (say so, no code change).
 4. The smallest change that fixes it; edit only what the problem needs; keep both flavours working (container and physical code
    paths; if the product has a flavour switch, test both paths of any guard you touch).
 5. Commit in each changed repo (clear message: test, step, cause, fix). `tools/code-deploy.sh <branch>` (pushes the branch into the node software repo with the product push; a reset/join pulls from there), restart/settle the nodes

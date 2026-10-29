@@ -245,7 +245,16 @@ QC_CONFIG=$T/plat.yaml "$TL/qc-dltest.sh" 6 > "$T/k10.out" 2>&1; ck $? 1 "K-10 q
 QC_CONFIG=$T/plat.yaml "$TL/qc-complete.sh" b5i1 5 complete > "$T/k10.out" 2>&1; ck "$?$(grep -q 'http 500' "$T/k10.out" && echo 1)" 11 "K-10 qc-complete exits non-zero on an HTTP 500"
 # integrity layer: manifest verifies, a modified file is flagged, the stamp format is right
 "$TL/verify-manifest.sh" --status > "$T/vm.out" 2>&1; ck "$(cat "$T/vm.out")" OK "manifest matches the tree (run verify-manifest.sh --update after a reviewed change)"
-cp "$ROOT/docs/pitfalls.md" "$T/pit.bak"; echo x >> "$ROOT/docs/pitfalls.md"; o=$("$TL/verify-manifest.sh" --status); cp "$T/pit.bak" "$ROOT/docs/pitfalls.md"; ck "$o" MODIFIED "a changed listed file gives MODIFIED"
+mkdir -p "$T/skillcopy"; (cd "$ROOT" && tar cf - --exclude=.git --exclude=state --exclude=config/input.yaml .) | tar xf - -C "$T/skillcopy"; echo x >> "$T/skillcopy/docs/pitfalls.md"
+o=$("$T/skillcopy/tools/verify-manifest.sh" --status); ck "$o" MODIFIED "a changed listed file gives MODIFIED (tested on a copy of the tree, not the real docs)"
+QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/mod.out" 2>&1; rc=$?; ck "$rc$(tail -n1 "$T/state/rounds/b10i1/run.log" | grep -c "STOPPED-SUBMIT.*MODIFIED")" 91 "MODIFIED tree: qc-submit stops with rc 9 (STOPPED-SUBMIT line) without QC_ACK_MODIFIED"
+QC_ACK_MODIFIED=1 DRYRUN=1 QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/mod.out" 2>&1; ck $? 0 "MODIFIED tree with QC_ACK_MODIFIED=1: dry run passes"
+grep -qE '\[skill v[0-9.]+ manifest [0-9a-f]{12} MODIFIED\]' "$T/mod.out"; ck $? 0 "stamp in the comment reads MODIFIED"
+QC_ACK_MODIFIED=1 DRYRUN=1 QC_CONFIG=$T/input.yaml "$TL/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/dry-stamp.out" 2>&1; grep -qE '\[skill v[0-9.]+ manifest [0-9a-f]{12} (OK|MODIFIED)\]' "$T/dry-stamp.out"; ck $? 0 "DRYRUN qc-submit comment carries the stamp [skill vX manifest <12 hex> OK|MODIFIED]"
+grep -qE 'STEPCHECK.*skill v\$SV manifest|STEPCHECK.*\$STAMP' "$TL/qc-submit.sh"; ck $? 0 "STEPCHECK line carries the stamp"
+QCHECK_DRY=1 QC_CONFIG=$T/input.yaml "$TL/qcheck.sh" > "$T/qch.out" 2>&1; ck "$?$(grep -c '^QCHECK' "$T/qch.out")" 01 "qcheck dry run prints one summary line, rc 0"
+QC_CONFIG=$T/nonexistent.yaml "$TL/qcheck.sh" > "$T/qch.out" 2>&1; ck "$?$(grep -c 'config missing' "$T/qch.out")" 21 "qcheck without config prints once and exits 2"
+grep -q QC_MAINTAINER "$TL/git-pr.sh"; ck $? 1 "git-pr.sh has no pull-request-opening path (no QC_MAINTAINER)"
 printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)

@@ -51,11 +51,11 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `cluster-wait-takeover.sh` | cluster-wait-takeover.sh <survivor> [max s]   poll portal login after a stop, then print users, volumes, pools | waittakeover.sh |
 | `client-mount-check.sh` | client-mount-check.sh   stat-probe NFS/CIFS mounts on client nodes, rc 1 on a stale one | new (stale mount check) |
 | `qc-local.sh` | qc-local.sh <test> list|<step> pass|fail [text]   local re-run record, never submits | qclocal.sh |
+| `verify-manifest.sh` | verify-manifest.sh [--status\|--hash\|--update]   audit aid: recompute MANIFEST.sha256 (`--update` maintainer only) | new (docs/integrity.md) |
+| `qtail.sh` | qtail.sh <label> -- <command...>   run a noisy command quietly, last 5/20 lines | quiet/qtail.sh |
+| `qlog.sh` | qlog.sh <file> [n]   quiet log view | quiet/qlog.sh |
+| `qcheck.sh` | qcheck.sh [node]   pool (all ONLINE) + isinsync + active test + git status in one line; rc 1 on odd items, rc 2 without config | quiet/qcheck.sh |
 
 Build restart: `cluster-reset.sh` / `cluster-build-repl.sh` answer REFUSED (rc 5) when `build<N>/status` did not end with DONE/STOP (e.g. the build was killed by a restart). After checking that no build process runs (lock free, no `docker_setup` in the nodes) restart on purpose with `QC_BUILD_RESTART=1 tools/cluster-reset.sh <N> ...` and log it in `run.log`.
 
 Libraries (sourced, not run): `lib/common.sh` (config, state dir, `mask`, `secret_tmp`, `run`), `lib/cfg.py` (YAML subset reader + validator), `lib/node.sh` + `lib/nodetype/{container,physical,virtualbox,ssh}.sh` (node abstraction), `lib/tstor.sh` (TopStor API: login from a password file, isinsync, etcd reads, pools), `lib/qc.sh` (platform calls with the key from its file), `lib/git.sh` (git and GitHub API with the credential file).
-| `verify-manifest.sh` | verify-manifest.sh [--status\|--hash\|--update]   audit aid: recompute MANIFEST.sha256 (`--update` maintainer only) | new (docs/integrity.md) |
-| `qtail.sh` | qtail.sh <label> -- <command...>   run a noisy command quietly, last 5/20 lines | quiet/qtail.sh |
-| `qlog.sh` | qlog.sh <file> [n]   quiet log view | quiet/qlog.sh |
-| `qcheck.sh` | qcheck.sh [node]   pool + active test + git status in one line | quiet/qcheck.sh |

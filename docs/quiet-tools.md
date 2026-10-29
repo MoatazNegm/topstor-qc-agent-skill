@@ -9,7 +9,7 @@ files under `state/`. They change no rule (submit once, FAIL only for a real app
 | `tools/qc-dltest.sh <id>` / `tools/round-new.sh` | download the test and steps once into `state/tests/`; read the steps file once, then work from it |
 | `tools/qtail.sh <label> -- <cmd...>` | run a noisy command (build, reset, join, `zpool`, etcd or status dumps): success prints the last 5 lines, failure the last 20, full output in `state/quiet/<label>.out`, secrets masked |
 | `tools/qlog.sh <file> [n]` | line count, error/fail count and the last n lines of a log |
-| `tools/qcheck.sh [node]` | pool health, active platform test and git status of the clones in ONE line; odd items expanded (`QCHECK_DRY=1` dry run) |
+| `tools/qcheck.sh [node]` | pool health (all ONLINE, timeout 10 s), isinsync, active platform test and git status in ONE line; odd items expanded, rc 1 (`QCHECK_DRY=1` dry run) |
 
 Open a full log only with `grep` or `tail -n 20` on the exact lines you need. Keep tool turns small and long jobs in the background
 with their own log.

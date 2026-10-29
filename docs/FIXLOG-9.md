@@ -1,0 +1,11 @@
+# FIXLOG 9 (v1.1.1)
+- MAJOR 1 fixed: "submitted step is FINAL" wording unified (SKILL.md 0A.5/3A/Forbidden, integrity.md rule 6, tester.md, supervisor.md, loop-rules.md); DELETE endpoint marked never used in platform-api.md.
+- MAJOR 2 fixed: tool fault = hold, report, maintainer changes the tool and runs --update (local fix only if the user allows it; stamp MODIFIED); SKILL.md 3A, loop-rules.md, coder.md, integrity.md.
+- MAJOR 3 fixed: SKILL.md description, README.md, loop-rules.md, supervisor.md say the skill writes the PR request for the maintainer.
+- MAJOR 4 fixed: git-pr.sh only writes state/pr-request-<branch>.md; PR-opening path and QC_MAINTAINER removed; clean-iteration refusal kept.
+- MINOR 5 fixed: qc-submit.sh stops with rc 9 on a MODIFIED tree unless QC_ACK_MODIFIED=1.
+- MINOR 6 fixed: selftest stamp checks (comment + STEPCHECK), MODIFIED test on a copy of the tree.
+- MINOR 7 fixed: qcheck.sh: isinsync, non-ONLINE flagged, rc 1 on odd items, first running non-client node, timeout 10 s, single message and rc 2 on missing config.
+- MINOR 8 fixed: qtail.sh masks through lib/common.sh `mask`.
+- MINOR 9 fixed: tools/README.md rows moved into the table.
+- MINOR 10 fixed: "re-run the held (not yet submitted) step".

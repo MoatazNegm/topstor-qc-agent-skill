@@ -27,7 +27,7 @@ Base URL = `platform.url` (e.g. `https://quality-check-omega.vercel.app/api`). T
 | `GET /test-results/history` | `qc-api.sh history` | rows `{test_id, step_id, result, executed_at}` (checked after each submit: exactly one new row) |
 | `GET /test-results/warnings` | `qc-api.sh warnings` | points withheld etc. |
 
-Not used by the agent (and never without the user's explicit OK): `DELETE /test-results/{testId}/steps/{stepId}` (reverts a step),
+Never used by the agent: `DELETE /test-results/{testId}/steps/{stepId}` (a submitted step is FINAL: never re-checked, replaced, deleted or resubmitted, never proposed or asked for),
 `POST /tests/{id}/activate`, every admin endpoint (users, keys, settings, backups, apps, step edits).
 
 ## Behaviour to know

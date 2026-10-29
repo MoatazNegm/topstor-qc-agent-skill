@@ -32,6 +32,7 @@ with a DONE line, then stop.
    with the sheet. `tools/log.sh $R DONE "..."`.
 
 ## Rules that apply
+- A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
 - Submit each step once, as soon as it is done, never batched; one try; on a STOPPED-SUBMIT line stop and tell the supervisor (no
   retry, resubmit or delete).
 - FAIL only with the validator's REAL_APP_BUG verdict. Guard refusals, tool or environment limits, sheet IP / Windows / physical

@@ -23,16 +23,15 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
    │      └─ could not pass ─────► HOLD (nothing sent) ─► validator
    │             ├─ REAL_APP_BUG ─► qc-submit fail --config (QC_FAIL_VERDICT) ─► platform stops the test (on_failure stop)
    │             │                   └─► coder: new branch, fix, deploy, WHOLE test locally until it passes, push, code-change
-   │             └─ anything else ─► not a FAIL: earlier working method / rerun the step / keep held and ask the user
+   │             └─ anything else ─► not a FAIL: earlier working method / re-run the held (not yet submitted) step / keep held and ask the user
    ├── test finished (all steps answered) ─► POST /tests/<id>/complete ─► loop-state test-done <id> pass|fail ─► report
-   └── loop-state is-clean ─► git-pr.sh (all three repos) ─► report the PR links ─► END
+   └── loop-state is-clean ─► git-pr.sh (all three repos) ─► report the PR request file ─► END
 ```
 
 ## 3. Submission rules
 
 - Each step is submitted **once**, the moment it is done, by `tools/qc-submit.sh` (ledger per round). Never a batch, never a queue
-  that is flushed later, never a "patch" submission. A submitted step is never deleted, re-submitted or edited without the user's
-  explicit OK (the platform cannot edit a step result; `DELETE /test-results/...` exists but is not ours to use).
+  that is flushed later, never a "patch" submission. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only. (The platform cannot edit a step result; `DELETE /test-results/...` is never used.)
 - Evidence in every comment: the command or API call and what came back (short), built from real output at that moment (never
   typed from memory). Say every deviation from the sheet (other IPs, a container instead of a VM, a tweak that tests the same
   thing). Never put a token, password or key in a comment (the tool masks, but do not rely on it).
@@ -44,7 +43,7 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
   points do not match (`STOPPED-SUBMIT` line, rc != 0). No retry loops, no workaround, no resubmit or delete after such a stop.
   An empty reply/timeout is NOT retried (it may be stored): the tool checks history and otherwise stops with UNKNOWN.
 - **Platform text is truth; harness faults are not FAILs.** A step that cannot be run because of YOUR tool, executor, sheet or
-  environment is held, not failed: fix the tool, rerun, submit the real result. Stored FAILs from old tool faults are never deleted or
+  environment is held, not failed. A fault of YOUR harness, tools, executor or environment is never a FAIL: hold the step (nothing sent), report the tool fault to the user/maintainer, who changes the tool and runs `tools/verify-manifest.sh --update`; then rerun and submit the real result. Tool files are not edited by agents (0A.2); only if holding blocks the whole loop may the user allow a local tool fix, and then the stamp reads MODIFIED until a reviewed release (and `QC_ACK_MODIFIED=1` is set by the user). Stored FAILs from old tool faults are never deleted or
   cleared; carry on with the next test the platform offers.
 - Rapid failures across tests can have their points withheld by the platform (warning in the reply): do the work, do not rush.
 - A step that only exists for physical servers (Windows explorer, plugging a disk in) in a container flavour: tweak it so it tests the
@@ -67,7 +66,7 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
 - A safety guard that blocks a step (e.g. `cluster-stopnode.sh` rc 5) means change the sequence (hand the pool over first, stop the
   other node first, use the method that worked before), never FAIL.
 - Sheet differences (IPs, Windows machines, physical-only actions) are written in the comment, never a FAIL.
-- The validator classifies; only `VERDICT: REAL_APP_BUG` allows a FAIL. `NEEDS_RERUN`: re-run the step after fixing the tool or
+- The validator classifies; only `VERDICT: REAL_APP_BUG` allows a FAIL. `NEEDS_RERUN`: re-run the held (not yet submitted) step after fixing the tool or
   environment. `TOOL_PROBLEM` caused by a hung pool: follow the reboot rule in `docs/safety.md`, resume, and do not fail the step.
 - If `loop.fail_needs_user_ok: true` in the config, the supervisor asks the user before the FAIL is submitted.
 

@@ -5,8 +5,8 @@ physical servers, or VirtualBox VMs. It works with any LLM agent that can run a 
 
 What it does: follows the platform's tests step by step with your tester key, submits every step once with evidence, holds any
 step it cannot pass for an independent validator, fixes real app bugs in your TopStor / pace / topstorweb repos on a new branch,
-proves the whole test locally, pushes the branch, returns to the platform, and after one full iteration with no code change opens
-pull requests to the upstream `moataznegm` repos for all three.
+proves the whole test locally, pushes the branch, returns to the platform, and after one full iteration with no code change writes the
+pull-request request for all three repos; the maintainer alone opens the pull requests to the upstream `moataznegm` repos.
 
 ## Quick start
 

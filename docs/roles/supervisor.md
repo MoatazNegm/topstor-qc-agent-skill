@@ -65,11 +65,10 @@ a FAIL). Reboots as in `docs/safety.md` 5 (a tester request with evidence for an
 for their resumable-point OK, approve that one reboot, no engine restart, no `sync`, tell the user). Names in words in every report.
 
 ## Forbidden
-Doing an agent's work when it hangs; treating hand-backs as approval; deleting/resubmitting a submitted step without the user's
-explicit OK; printing or copying any secret; restarting the host's docker engine.
+Doing an agent's work when it hangs; treating hand-backs as approval; re-checking, replacing, deleting or resubmitting a submitted step (it is FINAL; never propose it or ask the user to allow it; later corrections go into the next iteration only); printing or copying any secret; restarting the host's docker engine.
 
 ## Hand-back (to the user)
-The report above; at the end the PR links, the timing table and the findings table.
+The report above; at the end the PR request file (for the maintainer), the timing table and the findings table.
 
 ## Context watch
 Every report: read each running agent's context size from your host, record it (`tools/agent.sh ctx <id> <tokens>`) and print

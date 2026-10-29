@@ -1,6 +1,6 @@
 ---
 name: topstor-qc-agent
-description: Run the TopStor QualityCheck test loop on your own TopStor nodes (containers, physical servers or VirtualBox VMs) with any agent that can run a shell and make HTTP calls. Follows the platform test by test and step by step, submits every step once with evidence, fixes real app bugs in your TopStor/pace/topstorweb repos, and opens the final pull requests to the upstream repos after one full clean iteration.
+description: Run the TopStor QualityCheck test loop on your own TopStor nodes (containers, physical servers or VirtualBox VMs) with any agent that can run a shell and make HTTP calls. Follows the platform test by test and step by step, submits every step once with evidence, fixes real app bugs in your TopStor/pace/topstorweb repos, and, after one full clean iteration, writes the pull-request request for the maintainer, who alone opens the pull requests.
 ---
 
 # TopStor QC agent skill (portable)
@@ -25,7 +25,7 @@ history, give it this file, its role section and the concrete task. Paths are re
 2. Do not edit the rules, role briefs, `VERSION`, `MANIFEST.sha256` or any file the manifest lists; never run `tools/verify-manifest.sh --update`.
 3. Submit one step at a time, once, only through `tools/qc-submit.sh` (it stamps the comment `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`).
 4. Never open pull requests to, or push to, any `moataznegm` repository (the maintainer does that; you push to the user's own repos only).
-5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully BEFORE the one submit; a wrong result stays and any correction is shown only by the next iteration.
+5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully BEFORE the one submit; a wrong result stays and any correction is shown only by the next iteration. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
 6. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
 
 The manifest stamp is an AUDIT aid only. It cannot technically stop a determined user; real enforcement is server side (the platform
@@ -65,7 +65,7 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
   report to the user at once: a SUSPENDED pool, `zpool list` rc 124, a STOPPED-SUBMIT line, a held FAIL; approve a host/hypervisor
   reboot on the tester's request with evidence (`docs/safety.md` 5, `loop.reboot_for_tool_problems`); name tests and steps in words, never as bare codes.
 - **Forbidden:** doing an agent's job itself when that agent hangs (replace the agent instead); treating an agent hand-back as the
-  user's approval; deleting or resubmitting a submitted platform step without the user's explicit OK.
+  user's approval; re-checking, replacing, deleting or resubmitting a submitted platform step, or asking the user to allow it (A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.).
 - **Hand-back / report:** see `docs/roles/supervisor.md`.
 
 ### 1.2 QC TESTER (runs one platform test)
@@ -129,7 +129,7 @@ Who does what in that loop: tester runs and submits; on a step it cannot pass it
 nothing submitted) and the supervisor starts a validator; with `VERDICT: REAL_APP_BUG` the tester (or a new tester agent resuming
 the round) submits the FAIL with `QC_FAIL_VERDICT=<verdict file> tools/qc-submit.sh ... fail ... --config`; the supervisor starts a
 coder; when the coder has pushed, a new tester takes the next test the platform offers. Any other verdict: the step is NOT failed;
-use the earlier working method, re-run the step, or keep it held and ask the user (`docs/loop-rules.md` 4).
+use the earlier working method, re-run the held (not yet submitted) step, or keep it held and ask the user (`docs/loop-rules.md` 4).
 
 ## 3. Standing safety rules (summary; all of them in `docs/safety.md`)
 
@@ -147,9 +147,7 @@ use the earlier working method, re-run the step, or keep it held and ask the use
 ## 3A. Platform text is truth; FAIL only for app bugs
 
 Follow the platform's step text as it stands; sheet differences (IPs, machines, physical-only actions) are documented deviations, not
-failures. A fault of YOUR harness, tools, executor or environment is never a FAIL: hold the step, fix the tool, rerun, then submit the
-real result. Already-stored FAILs from past tool faults or since-fixed bugs are never deleted, cleared or resubmitted; continue with
-the next test the platform offers. Timing: `qc-submit.sh` records seconds per passed step in `state/qc-step-times.csv`; the tester
+failures. A fault of YOUR harness, tools, executor or environment is never a FAIL: hold the step (nothing sent), report the tool fault to the user/maintainer, who changes the tool and runs `tools/verify-manifest.sh --update`; then rerun and submit the real result. Tool files are not edited by agents (0A.2); only if holding blocks the whole loop may the user allow a local tool fix, and then the stamp reads MODIFIED until a reviewed release (and `QC_ACK_MODIFIED=1` is set by the user). A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only. Already-stored FAILs from past tool faults or since-fixed bugs stay as they are; continue with the next test the platform offers. Timing: `qc-submit.sh` records seconds per passed step in `state/qc-step-times.csv`; the tester
 writes a `NOW` line at least every `loop.now_line_minutes`.
 
 ## 4. Tools

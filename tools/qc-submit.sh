@@ -6,7 +6,7 @@
 # a FAIL and for the "upload the config files" step). A FAIL is refused unless QC_FAIL_VERDICT names a validator file containing
 # "VERDICT: REAL_APP_BUG" (FAIL only for a real app-code bug). Comments are masked (no tokens/passwords; QC_MASK_FILE adds words).
 # rc: 0 stored and checked | 1 rejected | 2 UNKNOWN (empty reply/timeout; NOT retried, decide by hand) | 3 already submitted |
-#     4 FAIL without verdict/config | 6 platform unhealthy, nothing sent | 7 history check failed | 8 points mismatch.
+#     4 FAIL without verdict/config | 9 skill tree MODIFIED and QC_ACK_MODIFIED=1 not set (user acknowledgement) | 6 platform unhealthy, nothing sent | 7 history check failed | 8 points mismatch.
 # The comment gets a last line "[skill vX.Y.Z manifest <12 hex> OK|MODIFIED]" (verify-manifest.sh); audit aid only.
 # On rc != 0 a STOPPED-SUBMIT line is written: STOP, tell the supervisor; no retry, no resubmit, no delete.
 . "$(dirname "$(readlink -f "$0")")/lib/qc.sh"
@@ -26,6 +26,7 @@ mask < "$CF" | cut -c1-6000 > "$W/comment"
 [ -s "$W/comment" ] || stop 4 "empty comment: every result needs evidence (command/API call and what came back)"
 # Audit stamp (docs/integrity.md): every step comment ends with "skill vX.Y.Z manifest <12 hex> OK|MODIFIED". An AUDIT aid, not enforcement.
 SV=$(cat "$QC_ROOT/VERSION" 2>/dev/null || echo unknown); MH=$("$QC_TOOLS/verify-manifest.sh" --hash | cut -c1-12); MS=$("$QC_TOOLS/verify-manifest.sh" --status)
+[ "$MS" = MODIFIED ] && [ "${QC_ACK_MODIFIED:-}" != 1 ] && stop 9 "skill tree is MODIFIED (a listed file differs from MANIFEST.sha256): nothing sent; tell the user, who may set QC_ACK_MODIFIED=1 to acknowledge"
 STAMP="skill v$SV manifest $MH $MS"; printf '\n[%s]\n' "$STAMP" >> "$W/comment"
 if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: would submit test $T step $S $RES ${MODE} comment: $(head -c 200 "$W/comment")"; exit 0; fi
 ok=0; for i in 1 2 3 4 5 6; do o=$(qc_code tests/active); c=${o% *}; t=${o#* }; [ "$c" = 200 ] && [ "${t%.*}" -lt 5 ] && { ok=1; break; }
