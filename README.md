@@ -10,11 +10,13 @@ pull-request request for all three repos; the maintainer alone opens the pull re
 
 ## New user: paste this
 
-> Clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git into a NEW directory ~/topstor-qc/skill using my GitHub read token from the file <PATH> (one line `https:// <user> : <token> @github.com` without the spaces; use `git -c credential.helper='store --file=<PATH>' clone`; never print it), then read docs/SETUP.md in it and follow it exactly.
+> Clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git into a NEW directory ~/topstor-qc/skill using my GitHub read token from the file <PATH> (one line `https://<github-user>:<token>@github.com`; use `git -c credential.helper='store --file=<PATH>' clone`; never print it), then read docs/SETUP.md in it and follow it exactly.
 
 The maintainer must give you first: read access to this private repo and a platform tester key. Everything else is in `docs/SETUP.md`.
 
 ## Quick start
+
+The single setup procedure is `docs/SETUP.md` (secrets, credential file format, node type first, replace every example path, preflight). The list below is only an overview.
 
 1. Requirements on the agent machine: `bash`, `curl`, `python3` (no extra modules), `git`, `zip`/`unzip`, plus `docker` (container
    nodes), `ssh`/`scp` (physical and VirtualBox nodes) and `VBoxManage` (VirtualBox, local or via `vbox_manager_ssh`).

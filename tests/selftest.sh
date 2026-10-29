@@ -264,6 +264,11 @@ grep -qE 'manifest (none|[0-9a-f]{12}) MODIFIED\]' "$T/emp.out"; ck $? 0 "ACK wi
 for r in tester coder validator; do grep -q 'SKILL.md. section 0A' "$ROOT/docs/roles/$r.md"; ck $? 0 "role $r inputs name SKILL.md section 0A (W-01)"; done
 grep -q 'section 0A' "$ROOT/docs/roles/supervisor.md"; ck $? 0 "supervisor prompt template names SKILL.md section 0A (W-01)"
 printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
+mkdir -p "$T/ss" && printf 'git: https://<github-user>:<token>@github.com\n' > "$T/ss/a.md"; "$TL/secret-scan.sh" "$T/ss" >/dev/null 2>&1; ck $? 0 "secret-scan exempts the placeholder credential URL (T-01)"
+echo 'x https://bob_C_abc123_A_github.com' | sed 's/_C_/:/;s/_A_/@/' > "$T/ss/b.md"; "$TL/secret-scan.sh" "$T/ss" >/dev/null 2>&1; ck $? 1 "secret-scan still flags bob:abc123@ (T-01)"
+echo 'x https://<u>_C_realtok_A_github.com' | sed 's/_C_/:/;s/_A_/@/' > "$T/ss/b.md"; "$TL/secret-scan.sh" "$T/ss" >/dev/null 2>&1; ck $? 1 "secret-scan still flags <u>:realtok@ (T-01)"
+sed 's#^\( *tester_key_file:\).*#\1 /root/secrets/qc-tester.key#' "$T/input.yaml" > "$T/ex.yaml"; QC_CONFIG=$T/ex.yaml "$TL/preflight.sh" --offline 2>&1 | grep -q 'WARN.*example path'; ck $? 0 "preflight warns when a value equals an example path (T-02)"
+QC_CONFIG=$T/input.yaml "$TL/preflight.sh" --offline 2>&1 | grep -q 'WARN.*example path'; ck $? 1 "preflight no example-path warning on a real config (T-02)"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"

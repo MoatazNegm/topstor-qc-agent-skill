@@ -9,6 +9,18 @@ QC_ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 CF=${QC_CONFIG:-$QC_ROOT/config/input.yaml}
 if [ ! -f "$CF" ]; then
 	echo "PREFLIGHT STOP: $CF is missing. Ask the user to copy config/input.example.yaml to config/input.yaml and fill in every field (secrets as file paths only)."; exit 2; fi
+# warn when a config value still equals a path of config/input.example.yaml (example paths must be replaced with the user's answers)
+python3 -I - "$CF" "$QC_ROOT/config/input.example.yaml" <<'PY'
+import re,sys
+def vals(f,keep):
+    r={}
+    for l in open(f,errors="ignore"):
+        m=re.match(r"\s*([A-Za-z_]+_file|[A-Za-z_]*dir|clone)\s*:\s*['\"]?(/[^\s#'\"]+)",l)
+        if m and not l.lstrip().startswith("#"): r.setdefault(m.group(2),m.group(1))
+    return r
+c=vals(sys.argv[1],0); e=vals(sys.argv[2],0)
+for v in sorted(set(c)&set(e)): print("PREFLIGHT WARN: %s still equals the example path %s: confirm with the user that this is really their path"%(c[v],v))
+PY
 python3 -I "$QC_ROOT/tools/lib/cfg.py" validate || { echo "PREFLIGHT STOP: ask the user to complete $CF (the lines above say what is missing)."; exit 2; }
 . "$QC_ROOT/tools/lib/node.sh"
 bad=0; need() { command -v "$1" >/dev/null 2>&1 || { echo "MISSING TOOL: $1 ($2)"; bad=1; }; }
