@@ -272,6 +272,9 @@ QC_CONFIG=$T/input.yaml "$TL/preflight.sh" --offline 2>&1 | grep -q 'WARN.*examp
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"
+# U-01: the bare-token conversion in SETUP.md creates the file private (umask 077 in a subshell)
+grep -q '( umask 077; { printf' "$ROOT/docs/SETUP.md"; ck $? 0 "SETUP bare-token conversion runs under umask 077 in a subshell (U-01)"
+( umask 022; ( umask 077; { printf 'https://%s' u; printf ':%s@github.com\n' "faketoken"; } > "$T/u01.cred" ); [ "$(stat -c %a "$T/u01.cred")" = 600 ] ); ck $? 0 "the SETUP conversion creates the credential file mode 600 even under umask 022 (U-01)"
 "$TL/secret-scan.sh" "$ROOT" > "$T/s.out" 2>&1; ck $? 0 "secret scan of the skill repo is clean"
 grep -q "$(cat "$T/key")" -r "$T/state" 2>/dev/null; ck $? 1 "fake key never written into the state dir"
 echo "selftest: $pass passed, $fail failed"; [ $fail = 0 ]

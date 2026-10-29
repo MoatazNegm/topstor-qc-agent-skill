@@ -19,7 +19,7 @@ Container nodes: run on the docker host of the node containers (the tools touch 
 Each secret in its own file: first line only, `chmod 600`, outside any git repo: the tester key, the TopStor admin password(s), the
 git token. Ask the user for the paths (create nothing with a guessed value).
 The git credential file holds ONE line `https://<github-user>:<token>@github.com`. A bare token file does not work: stop and ask the
-user to convert it (never echo it); with the user's consent only: `{ printf 'https://%s' <github-user>; printf ':%s@github.com\n' "$(head -1 <tokenfile>)"; } > <PATH>; chmod 600 <PATH>`.
+user to convert it (never echo it); with the user's consent only: `( umask 077; { printf 'https://%s' <github-user>; printf ':%s@github.com\n' "$(head -1 <tokenfile>)"; } > <PATH> ); chmod 600 <PATH>` (the subshell with `umask 077` makes the file private from its creation; keep the `chmod 600` as a second guard).
 If git answers `Invalid username or token` although the token is correct, the file format is wrong. Clone with:
 `git -c credential.helper='store --file=<PATH>' clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git ~/topstor-qc/skill`
 `repos.credential_file` (config) must hold a token that can PUSH to the user's own TopStor, pace and topstorweb repos (it may be the same
