@@ -16,15 +16,13 @@ This is an **audit aid**. It lets the maintainer and the platform SEE which skil
 accidental edits. It **cannot technically stop a determined user**: whoever can edit the rules can edit `verify-manifest.sh`,
 `qc-submit.sh` or the manifest as well, or post to the platform without the wrapper. Do not rely on it for trust.
 
-## Real enforcement must be server side (the platform and the maintainer)
-1. The test platform keeps an allow-list of accepted manifest hashes (per skill version). A step comment whose stamp is `MODIFIED`,
-   carries an unknown hash, or has no stamp is rejected or flagged for review; the platform decides.
-2. Pull requests to the maintainer's `moataznegm` app repos are opened ONLY by the maintainer. Test users have no write token for
+## What protects the maintainer's repos (no server-side enforcement exists)
+1. Pull requests to the maintainer's `moataznegm` app repos are opened ONLY by the maintainer. Test users have no write token for
    those repos. `tools/git-pr.sh` only writes the request file for the maintainer; it is not a way around this.
-3. Merge eligibility is computed by the platform, not claimed by the user: one FULL iteration on the SAME app version (same branch and
-   commits of TopStor, pace, topstorweb) with ZERO code changes, with every step stored once.
-4. The skill (this repo) is released only by the maintainer: `verify-manifest.sh --update` is run after a reviewed change and the new
-   `MANIFEST.sha256` hash is added to the platform allow-list.
+2. Merge eligibility is checked by the maintainer, not claimed by the user: one FULL iteration on the SAME app version (same branch and
+   commits of TopStor, pace, topstorweb) with ZERO code changes, with every step stored once, read from `state/loop.json` and the
+   platform history. The stamp (`OK|MODIFIED`, hash) in the step comments is what the maintainer reads as audit evidence.
+3. The skill (this repo) is released only by the maintainer: `verify-manifest.sh --update` is run after a reviewed change.
 
 ## Non-changeable rules for the agent (also in SKILL.md section 0A)
 1. Do not start extra subagents beyond the ones the skill and the supervisor's brief name (one fresh agent per task, one role brief each).

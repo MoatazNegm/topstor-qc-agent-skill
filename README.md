@@ -46,9 +46,9 @@ pull-request request for all three repos; the maintainer alone opens the pull re
 
 `VERSION`, `MANIFEST.sha256` and `tools/verify-manifest.sh` let anyone see whether the skill files were changed. `tools/qc-submit.sh`
 stamps every step comment with `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`. This is an AUDIT aid: it cannot technically stop a
-determined user, who can edit the checker too. Real enforcement is server side: the platform allow-lists accepted manifest hashes
-and rejects or flags others; pull requests to the maintainer's `moataznegm` repos are opened only by the maintainer (test users have no
-write token); merge eligibility (one full iteration on the same app version with zero code changes) is computed by the platform.
+determined user, who can edit the checker too. The maintainer reads the stamp in the step comments. Pull requests to the maintainer's
+`moataznegm` repos are opened only by the maintainer (test users have no write token); the maintainer checks merge eligibility (one full
+iteration, same app version, zero code changes, every step stored once) from `state/loop.json` and the platform history.
 The agent rules that must not be changed are in `SKILL.md` section 0A. Details: `docs/integrity.md`.
 
 ## Limits

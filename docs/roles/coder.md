@@ -24,7 +24,7 @@ The verdict file, the full sheet `state/tests/test<id>.json`, the round's run.lo
    "<test/step: cause>"`, and a short entry in the product's development notes if the repo keeps them.
 
 ## Forbidden
-Pushing to the upstream repos or opening pull requests (that is the final step after a clean iteration); editing a pushed branch;
+Pushing to the upstream repos or opening pull requests (only the maintainer opens pull requests; after a clean iteration git-pr.sh writes the request); editing a pushed branch;
 pushing before the full local test passes; pushing a tool change to the product repos; risky or design-changing fixes without
 asking the user (write the finding and the proposal instead); leaving uncommitted edits on nodes.
 

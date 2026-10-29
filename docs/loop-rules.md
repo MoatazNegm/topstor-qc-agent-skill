@@ -66,8 +66,8 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
 - A safety guard that blocks a step (e.g. `cluster-stopnode.sh` rc 5) means change the sequence (hand the pool over first, stop the
   other node first, use the method that worked before), never FAIL.
 - Sheet differences (IPs, Windows machines, physical-only actions) are written in the comment, never a FAIL.
-- The validator classifies; only `VERDICT: REAL_APP_BUG` allows a FAIL. `NEEDS_RERUN`: re-run the held (not yet submitted) step after fixing the tool or
-  environment. `TOOL_PROBLEM` caused by a hung pool: follow the reboot rule in `docs/safety.md`, resume, and do not fail the step.
+- The validator classifies; only `VERDICT: REAL_APP_BUG` allows a FAIL. `NEEDS_RERUN`: re-run the held (not yet submitted) step after the maintainer fixed the tool (or the
+  environment was fixed). `TOOL_PROBLEM` caused by a hung pool: follow the reboot rule in `docs/safety.md`, resume, and do not fail the step.
 - If `loop.fail_needs_user_ok: true` in the config, the supervisor asks the user before the FAIL is submitted.
 
 ## 5. Version under test, branches, pushes

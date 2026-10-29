@@ -255,6 +255,9 @@ grep -qE 'STEPCHECK.*skill v\$SV manifest|STEPCHECK.*\$STAMP' "$TL/qc-submit.sh"
 QCHECK_DRY=1 QC_CONFIG=$T/input.yaml "$TL/qcheck.sh" > "$T/qch.out" 2>&1; ck "$?$(grep -c '^QCHECK' "$T/qch.out")" 01 "qcheck dry run prints one summary line, rc 0"
 QC_CONFIG=$T/nonexistent.yaml "$TL/qcheck.sh" > "$T/qch.out" 2>&1; ck "$?$(grep -c 'config missing' "$T/qch.out")" 21 "qcheck without config prints once and exits 2"
 grep -q QC_MAINTAINER "$TL/git-pr.sh"; ck $? 1 "git-pr.sh has no pull-request-opening path (no QC_MAINTAINER)"
+printf '#!/bin/sh\nexit 0\n' > "$T/skillcopy/tools/verify-manifest.sh"; chmod +x "$T/skillcopy/tools/verify-manifest.sh"
+QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/mod.out" 2>&1; rc=$?; ck "$rc$(tail -n1 "$T/state/rounds/b10i1/run.log" | grep -c "STOPPED-SUBMIT")" 91 "empty manifest status counts as not OK: qc-submit stops with rc 9"
+grep -rlE 'api\.github\.com' "$ROOT/tools" 2>/dev/null | grep -q .; ck $? 1 "no tool talks to api.github.com (no write-capable GitHub API call)"
 printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)

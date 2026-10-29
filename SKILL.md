@@ -25,12 +25,13 @@ history, give it this file, its role section and the concrete task. Paths are re
 2. Do not edit the rules, role briefs, `VERSION`, `MANIFEST.sha256` or any file the manifest lists; never run `tools/verify-manifest.sh --update`.
 3. Submit one step at a time, once, only through `tools/qc-submit.sh` (it stamps the comment `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`).
 4. Never open pull requests to, or push to, any `moataznegm` repository (the maintainer does that; you push to the user's own repos only).
-5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully BEFORE the one submit; a wrong result stays and any correction is shown only by the next iteration. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
+5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
 6. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
 
-The manifest stamp is an AUDIT aid only. It cannot technically stop a determined user; real enforcement is server side (the platform
-allow-lists manifest hashes, test users have no write token for the maintainer's repos, and merge eligibility is computed by the
-platform: one full iteration on the same app version with zero code changes).
+The manifest stamp is an AUDIT aid only: the maintainer reads it in the step comments. It cannot technically stop a determined user.
+Protection of the maintainer's repos rests on the maintainer-only rule (0A.4) and on test users having no write token for them. The
+maintainer checks merge eligibility (one full iteration, same app version, zero code changes, every step stored once) from `state/loop.json`
+and the platform history.
 
 ## 1. Roles
 
@@ -65,7 +66,7 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
   report to the user at once: a SUSPENDED pool, `zpool list` rc 124, a STOPPED-SUBMIT line, a held FAIL; approve a host/hypervisor
   reboot on the tester's request with evidence (`docs/safety.md` 5, `loop.reboot_for_tool_problems`); name tests and steps in words, never as bare codes.
 - **Forbidden:** doing an agent's job itself when that agent hangs (replace the agent instead); treating an agent hand-back as the
-  user's approval; re-checking, replacing, deleting or resubmitting a submitted platform step, or asking the user to allow it (A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.).
+  user's approval; re-checking, replacing, deleting or resubmitting a submitted platform step, or asking the user to allow it.
 - **Hand-back / report:** see `docs/roles/supervisor.md`.
 
 ### 1.2 QC TESTER (runs one platform test)
