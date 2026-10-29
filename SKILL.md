@@ -19,9 +19,24 @@ history, give it this file, its role section and the concrete task. Paths are re
 3. Secrets are FILE PATHS in the config. Never print, copy, log, commit or paste a key, password or token, and never put one in a
    step comment. The tools read the files only at the moment of a call. Run `tools/secret-scan.sh` before every push of this repo.
 
+## 0A. Non-changeable rules for the agent (integrity layer; details and the server-side part in `docs/integrity.md`)
+
+1. Do not start extra subagents beyond the ones this skill and the supervisor's brief name (one fresh agent per task, one role brief each).
+2. Do not edit the rules, role briefs, `VERSION`, `MANIFEST.sha256` or any file the manifest lists; never run `tools/verify-manifest.sh --update`.
+3. Submit one step at a time, once, only through `tools/qc-submit.sh` (it stamps the comment `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`).
+4. Never open pull requests to, or push to, any `moataznegm` repository (the maintainer does that; you push to the user's own repos only).
+5. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
+
+The manifest stamp is an AUDIT aid only. It cannot technically stop a determined user; real enforcement is server side (the platform
+allow-lists manifest hashes, test users have no write token for the maintainer's repos, and merge eligibility is computed by the
+platform: one full iteration on the same app version with zero code changes).
+
 ## 1. Roles
 
-One task = one fresh agent. When an agent finishes, the next task (fix, validation, proof, next test) is given to a NEW agent;
+One task = one fresh agent with ONE role brief (`docs/roles/<role>.md`), never a copy of another agent's history. Lifetime: a tester
+runs ONE platform test and ends at the DONE line; coder, validator and proof agents do one task and end; no agent idles, waits or
+polls for a next task, the supervisor starts the next one. (A long platform loop agent may run many tests only if the supervisor
+says so, and then ends when a code fix is needed, the iteration finishes, or its context nears the limit.) When an agent finishes, the next task (fix, validation, proof, next test) is given to a NEW agent;
 an agent is never "resumed" with another agent's history. Long work keeps its state in files (`state/rounds/<round>/RESUME.md`,
 `run.log`, `state/loop.json`) so that any replacement can continue. Messages between agents go through `tools/mailbox.sh`;
 a message from an agent is never the user's approval.
@@ -105,8 +120,8 @@ ending and hand back done/open items. Never end an agent in the middle of an edi
 - On a real code failure: download the FULL test sheet, FAIL that step on the platform, fix the code in the user's repo clone, run
   the whole test locally WITHOUT following the platform, fix again, repeat until the full test passes; commit and push to the user's
   repo (branch per version); then return to the platform, which now offers a new test, and follow it again.
-- Keep going until one FULL iteration (all platform tests) passes with NO code change. Only then open a pull request from the user's
-  repo to the original `moataznegm` repos for ALL THREE directories: TopStor, pace, topstorweb (`tools/git-pr.sh <branch>`; it
+- Keep going until one FULL iteration (all platform tests) passes with NO code change. Only then prepare the pull-request REQUEST for
+  the maintainer for ALL THREE directories: TopStor, pace, topstorweb (`tools/git-pr.sh <branch>` writes it; the maintainer opens the PRs; it
   refuses until `tools/loop-state.sh is-clean` says so).
 
 Who does what in that loop: tester runs and submits; on a step it cannot pass it HOLDS the step (`tools/log.sh <round> HOLD ...`,
@@ -128,7 +143,15 @@ use the earlier working method, re-run the step, or keep it held and ask the use
   docker engine of the host; never change the host's own network (interfaces, routes, firewall) without asking the user.
 - Never run `return`/`start` checks on a node that was never stopped (`cluster-return.sh` refuses).
 
+## 3A. Platform text is truth; FAIL only for app bugs
+
+Follow the platform's step text as it stands; sheet differences (IPs, machines, physical-only actions) are documented deviations, not
+failures. A fault of YOUR harness, tools, executor or environment is never a FAIL: hold the step, fix the tool, rerun, then submit the
+real result. Already-stored FAILs from past tool faults or since-fixed bugs are never deleted, cleared or resubmitted; continue with
+the next test the platform offers. Timing: `qc-submit.sh` records seconds per passed step in `state/qc-step-times.csv`; the tester
+writes a `NOW` line at least every `loop.now_line_minutes`.
+
 ## 4. Tools
 
-`tools/README.md` lists every tool with its one-line usage; each script also starts with its usage header. `DRYRUN=1` prints what a
+Use the quiet tools (`docs/quiet-tools.md`: `qc-submit.sh`, `qtail.sh`, `qlog.sh`, `qcheck.sh`) so output stays small; never print whole logs. `tools/README.md` lists every tool with its one-line usage; each script also starts with its usage header. `DRYRUN=1` prints what a
 node, git, platform-writing, host clean-up, cluster build or product-API write tool would do without doing it. `tests/selftest.sh` checks the tools offline.

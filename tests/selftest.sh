@@ -243,6 +243,10 @@ QC_CONFIG=$T/plat.yaml "$TL/qc-submit.sh" b5i1 9 7 pass "$T/pc" > "$T/l06.out" 2
 QC_CONFIG=$T/plat.yaml "$TL/qc-dltest.sh" 6 > "$T/k10.out" 2>&1; ck $? 1 "K-10 qc-dltest refuses a reply without steps"
 [ ! -e "$T/state/tests/test6.json" ]; ck $? 0 "K-10 qc-dltest keeps no file for a reply without steps"
 QC_CONFIG=$T/plat.yaml "$TL/qc-complete.sh" b5i1 5 complete > "$T/k10.out" 2>&1; ck "$?$(grep -q 'http 500' "$T/k10.out" && echo 1)" 11 "K-10 qc-complete exits non-zero on an HTTP 500"
+# integrity layer: manifest verifies, a modified file is flagged, the stamp format is right
+"$TL/verify-manifest.sh" --status > "$T/vm.out" 2>&1; ck "$(cat "$T/vm.out")" OK "manifest matches the tree (run verify-manifest.sh --update after a reviewed change)"
+cp "$ROOT/docs/pitfalls.md" "$T/pit.bak"; echo x >> "$ROOT/docs/pitfalls.md"; o=$("$TL/verify-manifest.sh" --status); cp "$T/pit.bak" "$ROOT/docs/pitfalls.md"; ck "$o" MODIFIED "a changed listed file gives MODIFIED"
+printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)
 [ -z "$(find "$ROOT" -name __pycache__ -not -path "*/.git/*")" ]; ck $? 0 "no __pycache__ written into the skill tree"

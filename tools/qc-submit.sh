@@ -7,6 +7,7 @@
 # "VERDICT: REAL_APP_BUG" (FAIL only for a real app-code bug). Comments are masked (no tokens/passwords; QC_MASK_FILE adds words).
 # rc: 0 stored and checked | 1 rejected | 2 UNKNOWN (empty reply/timeout; NOT retried, decide by hand) | 3 already submitted |
 #     4 FAIL without verdict/config | 6 platform unhealthy, nothing sent | 7 history check failed | 8 points mismatch.
+# The comment gets a last line "[skill vX.Y.Z manifest <12 hex> OK|MODIFIED]" (verify-manifest.sh); audit aid only.
 # On rc != 0 a STOPPED-SUBMIT line is written: STOP, tell the supervisor; no retry, no resubmit, no delete.
 . "$(dirname "$(readlink -f "$0")")/lib/qc.sh"
 . "$QC_TOOLS/lib/tstor.sh"
@@ -23,6 +24,9 @@ fi
 W=$(mktemp -d "$QC_STATE/tmp/sub.XXXXXX"); trap 'rm -rf "$W"' EXIT
 mask < "$CF" | cut -c1-6000 > "$W/comment"
 [ -s "$W/comment" ] || stop 4 "empty comment: every result needs evidence (command/API call and what came back)"
+# Audit stamp (docs/integrity.md): every step comment ends with "skill vX.Y.Z manifest <12 hex> OK|MODIFIED". An AUDIT aid, not enforcement.
+SV=$(cat "$QC_ROOT/VERSION" 2>/dev/null || echo unknown); MH=$("$QC_TOOLS/verify-manifest.sh" --hash | cut -c1-12); MS=$("$QC_TOOLS/verify-manifest.sh" --status)
+STAMP="skill v$SV manifest $MH $MS"; printf '\n[%s]\n' "$STAMP" >> "$W/comment"
 if [ -n "${DRYRUN:-}" ]; then echo "DRYRUN: would submit test $T step $S $RES ${MODE} comment: $(head -c 200 "$W/comment")"; exit 0; fi
 ok=0; for i in 1 2 3 4 5 6; do o=$(qc_code tests/active); c=${o% *}; t=${o#* }; [ "$c" = 200 ] && [ "${t%.*}" -lt 5 ] && { ok=1; break; }
 	log "platform GET slow/err before submit: http $c ${t}s (try $i)" >> "$L"; sleep 30; done
@@ -92,7 +96,7 @@ PY
 fi; fi
 echo "$NOW" > "$QC_STATE/timings/.last_$T"
 sleep 3; E1=$(qc_earned); n=; for i in 1 2 3 4 5 6; do read -r n rs <<< "$(qc_hist_rows "$T" "$S" "$SINCE")"; [ "$n" = $((H0+1)) ] && break; sleep 10; done
-echo "$(date +%T) STEPCHECK test $T $(step_words "$T" "$S") id $S: submitted $RES; monthEarned $E0 -> $E1 (pointsAwarded ${PTS:-?}); history rows for this step this round: $n ($rs), stored once: $([ "$n" = $((H0+1)) ] && echo yes || echo NO)${WARN:+; platform warning: $WARN}${AE:+; autoEnded=$AE}" | mask | tee -a "$L"
+echo "$(date +%T) STEPCHECK test $T $(step_words "$T" "$S") id $S: submitted $RES; monthEarned $E0 -> $E1 (pointsAwarded ${PTS:-?}); history rows for this step this round: $n ($rs), $STAMP, stored once: $([ "$n" = $((H0+1)) ] && echo yes || echo NO)${WARN:+; platform warning: $WARN}${AE:+; autoEnded=$AE}" | mask | tee -a "$L"
 [ "$AE" = true ] && echo "$(date +%T) NOTE AUTOENDED: the platform ended test $T after this step (on_failure stop); take the next test from GET /tests/active" >> "$L"
 [ "$n" = $((H0+1)) ] || stop 7 "history check: expected one new row, found '$n'"
 if [ "$RES" = pass ] && [ -n "$PTS" ] && [ "$PTS" -gt 0 ] 2>/dev/null && [ -n "$E0" ] && [ -n "$E1" ] && [ $((E1-E0)) -ne "$PTS" ] 2>/dev/null; then

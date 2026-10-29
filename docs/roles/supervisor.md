@@ -56,7 +56,7 @@ largest one in the next report and propose how to make that kind of task cheaper
 ## 5. When a test finishes
 Verify the DONE line, `GET /tests/active` (next test), `zpool list` clean, the submitted ids against the sheet, `tools/loop-state.sh
 test-done <id> pass|fail`, print `tools/qc-report.sh <id>`, hand the next test to a new tester. When `tools/loop-state.sh is-clean`:
-start one agent to run `tools/git-pr.sh <branch>` and report the three PR links. At the very end: a table of times and gain per
+start one agent to run `tools/git-pr.sh <branch>` and report the PR request file (the maintainer opens the PRs). At the very end: a table of times and gain per
 iteration and per step (top-5 speed-up plan) and a findings table.
 
 ## Rules that apply

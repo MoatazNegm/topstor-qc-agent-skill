@@ -37,7 +37,7 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 | `git-newbranch.sh` | git-newbranch.sh <NEW BRANCH> [base branch]   start a fix branch in all three clones FROM THE LATEST PUSHED BRANCH (default: the | new |
 | `code-deploy.sh` | code-deploy.sh <BRANCH> [node...]   (also: --check-branch <BRANCH> [cluster]: rc 0 branch present, rc 1 MISSING, rc 2 repo not reachable; checked from the agent machine unless deploy.software_repo_check_from is node)   put the committed BRANCH of the three local clones onto the nodes (default: every running cluster | new |
 | `git-pushbranch.sh` | git-pushbranch.sh <BRANCH>   push a fix branch of the three clones to YOUR repos with the stored credential (adapted pushbranch.sh), | pushbranch.sh |
-| `git-pr.sh` | git-pr.sh <BRANCH> [--title <t>] [--body-file <f>]   open the FINAL pull requests from YOUR repos to the upstream repos (repos.upstream, | new |
+| `git-pr.sh` | git-pr.sh <BRANCH> [--title <t>] [--body-file <f>]   PREPARE the final pull-request request for the maintainer (does not open PRs; repos.upstream, | new |
 | `agent.sh` | agent.sh <command>   registry of the fresh agents the supervisor runs (one task per agent), in state/agents/. | new |
 | `mailbox.sh` | mailbox.sh <send\|read\|wait> ...   file mailbox between the supervisor and its agents (any agent framework can use it): | mailbox.sh |
 | `supervisor-snapshot.sh` | supervisor-snapshot.sh   the supervisor's input for the periodic report (adapted from the original harness watch script): clock, platform active test, loop | original watch script |
@@ -55,3 +55,7 @@ Every tool reads `config/input.yaml` (or `$QC_CONFIG`) and writes only under `st
 Build restart: `cluster-reset.sh` / `cluster-build-repl.sh` answer REFUSED (rc 5) when `build<N>/status` did not end with DONE/STOP (e.g. the build was killed by a restart). After checking that no build process runs (lock free, no `docker_setup` in the nodes) restart on purpose with `QC_BUILD_RESTART=1 tools/cluster-reset.sh <N> ...` and log it in `run.log`.
 
 Libraries (sourced, not run): `lib/common.sh` (config, state dir, `mask`, `secret_tmp`, `run`), `lib/cfg.py` (YAML subset reader + validator), `lib/node.sh` + `lib/nodetype/{container,physical,virtualbox,ssh}.sh` (node abstraction), `lib/tstor.sh` (TopStor API: login from a password file, isinsync, etcd reads, pools), `lib/qc.sh` (platform calls with the key from its file), `lib/git.sh` (git and GitHub API with the credential file).
+| `verify-manifest.sh` | verify-manifest.sh [--status\|--hash\|--update]   audit aid: recompute MANIFEST.sha256 (`--update` maintainer only) | new (docs/integrity.md) |
+| `qtail.sh` | qtail.sh <label> -- <command...>   run a noisy command quietly, last 5/20 lines | quiet/qtail.sh |
+| `qlog.sh` | qlog.sh <file> [n]   quiet log view | quiet/qlog.sh |
+| `qcheck.sh` | qcheck.sh [node]   pool + active test + git status in one line | quiet/qcheck.sh |

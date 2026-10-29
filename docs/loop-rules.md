@@ -8,8 +8,9 @@
 3. On a real code failure: download the FULL test sheet, FAIL that step on the platform, fix the code in the user's repo clone, run
    the whole test locally WITHOUT following the platform, fix again, repeat until the full test passes; commit and push to the
    user's repo (branch per version); then return to the platform, which now offers a new test, and follow it again.
-4. Keep going until one FULL iteration (all platform tests) passes with NO code change. Only then open a pull request from the
-   user's repo to the original `moataznegm` repos for ALL THREE directories: TopStor, pace, topstorweb.
+4. Keep going until one FULL iteration (all platform tests) passes with NO code change. Only then prepare the pull-request request
+   (`tools/git-pr.sh`) for ALL THREE directories: TopStor, pace, topstorweb; the maintainer alone opens the pull requests to the
+   `moataznegm` repos (docs/integrity.md).
 
 ## 2. Flow
 
@@ -42,6 +43,9 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
   test: hold it, do not submit, give the evidence; (b) a submit returns an error, the step is not stored exactly once, or the
   points do not match (`STOPPED-SUBMIT` line, rc != 0). No retry loops, no workaround, no resubmit or delete after such a stop.
   An empty reply/timeout is NOT retried (it may be stored): the tool checks history and otherwise stops with UNKNOWN.
+- **Platform text is truth; harness faults are not FAILs.** A step that cannot be run because of YOUR tool, executor, sheet or
+  environment is held, not failed: fix the tool, rerun, submit the real result. Stored FAILs from old tool faults are never deleted or
+  cleared; carry on with the next test the platform offers.
 - Rapid failures across tests can have their points withheld by the platform (warning in the reply): do the work, do not rush.
 - A step that only exists for physical servers (Windows explorer, plugging a disk in) in a container flavour: tweak it so it tests the
   same behaviour (e.g. hot-add = attach another loop disk and wait for it in the disk list) and say so, or PASS with

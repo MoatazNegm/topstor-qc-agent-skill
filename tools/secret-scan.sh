@@ -16,7 +16,7 @@ for dp,dn,fn in os.walk(root):
     dn[:]=[d for d in dn if d not in skip_dirs]
     for f in fn:
         p=os.path.join(dp,f); rel=os.path.relpath(p,root)
-        if rel in ("config/input.yaml",): continue
+        if rel in ("config/input.yaml","MANIFEST.sha256"): continue  # manifest = public file hashes
         try: lines=open(p,errors="ignore").read().splitlines()
         except Exception: continue
         for i,l in enumerate(lines,1):

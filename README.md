@@ -34,11 +34,22 @@ pull requests to the upstream `moataznegm` repos for all three.
 | `docs/loop-rules.md` | the loop in detail: submission, stop and hold rules, FAIL, iterations, clean count, branches |
 | `docs/safety.md` | cluster safety rules: settle, stop, iSCSI, pools, disks, builds, reboots |
 | `docs/platform-api.md` | the QualityCheck endpoints the loop uses, headers, checks after each submit |
+| `docs/integrity.md` | VERSION, manifest, stamp, what the platform must enforce |
+| `docs/quiet-tools.md` | low-output wrappers for agents |
 | `docs/pitfalls.md` | lessons from earlier runs |
 | `docs/node-types.md` | the node abstraction, how to add a type, what is flavour-specific |
 | `docs/roles/*.md` | one brief per role (goal, inputs, steps, rules, forbidden, hand-back); the supervisor brief holds the report spec |
 | `tests/selftest.sh` | offline self-test |
 | `state/` | created at run time: rounds, ledgers, timings, agents, mailbox (git-ignored) |
+
+## Integrity (audit aid, NOT enforcement)
+
+`VERSION`, `MANIFEST.sha256` and `tools/verify-manifest.sh` let anyone see whether the skill files were changed. `tools/qc-submit.sh`
+stamps every step comment with `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`. This is an AUDIT aid: it cannot technically stop a
+determined user, who can edit the checker too. Real enforcement is server side: the platform allow-lists accepted manifest hashes
+and rejects or flags others; pull requests to the maintainer's `moataznegm` repos are opened only by the maintainer (test users have no
+write token); merge eligibility (one full iteration on the same app version with zero code changes) is computed by the platform.
+The agent rules that must not be changed are in `SKILL.md` section 0A. Details: `docs/integrity.md`.
 
 ## Limits
 
