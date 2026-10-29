@@ -34,7 +34,7 @@ pull-request request for all three repos; the maintainer alone opens the pull re
 | `docs/loop-rules.md` | the loop in detail: submission, stop and hold rules, FAIL, iterations, clean count, branches |
 | `docs/safety.md` | cluster safety rules: settle, stop, iSCSI, pools, disks, builds, reboots |
 | `docs/platform-api.md` | the QualityCheck endpoints the loop uses, headers, checks after each submit |
-| `docs/integrity.md` | VERSION, manifest, stamp, what the platform must enforce |
+| `docs/integrity.md` | VERSION, manifest, stamp, what protects the maintainer's repos |
 | `docs/quiet-tools.md` | low-output wrappers for agents |
 | `docs/pitfalls.md` | lessons from earlier runs |
 | `docs/node-types.md` | the node abstraction, how to add a type, what is flavour-specific |

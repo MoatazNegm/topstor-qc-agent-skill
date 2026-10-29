@@ -103,4 +103,3 @@ preflight ─► GET /tests/active ─► round-new (sheet downloaded, all steps
 - After every test: `tools/qc-report.sh <id>` (totals and slowest steps; say which numbers include fix/debug time).
 - At the end: per iteration and per step times, the five slowest steps and a proposal to make them faster (`tools/qc-sum.sh`).
 
-- **Submitted steps are FINAL.** You cannot change a passed/failed step status after submitting it to the test platform: no re-check, replace, supersede, delete or resubmit, and never ask the user to allow it. Judge before the one submit; corrections appear only in the next iteration.

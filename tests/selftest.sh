@@ -258,6 +258,8 @@ grep -q QC_MAINTAINER "$TL/git-pr.sh"; ck $? 1 "git-pr.sh has no pull-request-op
 printf '#!/bin/sh\nexit 0\n' > "$T/skillcopy/tools/verify-manifest.sh"; chmod +x "$T/skillcopy/tools/verify-manifest.sh"
 QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/mod.out" 2>&1; rc=$?; ck "$rc$(tail -n1 "$T/state/rounds/b10i1/run.log" | grep -c "STOPPED-SUBMIT")" 91 "empty manifest status counts as not OK: qc-submit stops with rc 9"
 grep -rlE 'api\.github\.com' "$ROOT/tools" 2>/dev/null | grep -q .; ck $? 1 "no tool talks to api.github.com (no write-capable GitHub API call)"
+(cd "$ROOT" && git ls-files 2>/dev/null | grep -v 'FIXLOG' | grep -v '^tests/selftest.sh$' | xargs grep -liE 'server.side|must enforce' 2>/dev/null) | grep -q .; ck $? 1 "no tracked file claims server-side enforcement"
+QC_ACK_MODIFIED=1 DRYRUN=1 QC_CONFIG=$T/input.yaml "$T/skillcopy/tools/qc-submit.sh" b10i1 10 6 pass "$T/c" > "$T/emp.out" 2>&1; grep -qE ' MODIFIED\]' "$T/emp.out"; ck $? 0 "ACK with empty status stamps MODIFIED"
 printf '%s' "$("$TL/verify-manifest.sh" --hash)" | grep -qE '^[0-9a-f]{64}$'; ck $? 0 "manifest hash is 64 hex"
 kill $SRV 2>/dev/null; wait $SRV 2>/dev/null
 # H-01: the selftest leaves the tree clean (no bytecode written)

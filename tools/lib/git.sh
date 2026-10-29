@@ -1,5 +1,5 @@
 # git.sh -- git/GitHub helpers. Sourced. The credential FILE (repos.credential_file, git "store" format) is used directly by git
-# (credential.helper=store --file=...) and, for the GitHub API, read through "git credential fill" into a header fd. Never printed,
+# (credential.helper=store --file=...). Git only; never printed,
 # never copied, never put on a command line or into a remote URL.
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 CRED=$(cfg get repos.credential_file)

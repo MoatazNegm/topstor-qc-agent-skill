@@ -12,11 +12,11 @@
   one listed file differs from the manifest (or the manifest is missing).
 
 ## What it is NOT
-This is an **audit aid**. It lets the maintainer and the platform SEE which skill build produced a result, and it flags casual or
+This is an **audit aid**. It lets the maintainer see, in the step comments, which skill build produced a result, and it flags casual or
 accidental edits. It **cannot technically stop a determined user**: whoever can edit the rules can edit `verify-manifest.sh`,
 `qc-submit.sh` or the manifest as well, or post to the platform without the wrapper. Do not rely on it for trust.
 
-## What protects the maintainer's repos (no server-side enforcement exists)
+## What protects the maintainer's repos (nothing is checked on the platform)
 1. Pull requests to the maintainer's `moataznegm` app repos are opened ONLY by the maintainer. Test users have no write token for
    those repos. `tools/git-pr.sh` only writes the request file for the maintainer; it is not a way around this.
 2. Merge eligibility is checked by the maintainer, not claimed by the user: one FULL iteration on the SAME app version (same branch and
@@ -32,3 +32,4 @@ accidental edits. It **cannot technically stop a determined user**: whoever can 
 4. Never open pull requests (or push) to any `moataznegm` repository. Push only to the user's own repos.
 5. If `verify-manifest.sh` says `MODIFIED` and you did not intend it, stop and tell the user before submitting anything.
 6. A submitted step is FINAL: never re-checked, replaced, deleted or resubmitted; never propose it or ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
+7. The test platform cannot be changed: never design, request or propose platform-side changes (allow-lists, new fields, server gates); integrity is an audit stamp only. Work only with the existing endpoints in `docs/platform-api.md`.

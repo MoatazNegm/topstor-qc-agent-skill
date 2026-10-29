@@ -3,7 +3,7 @@
 #   (no option) print OK or MODIFIED plus the changed/missing files; rc 0 = all match, rc 1 = MODIFIED or no manifest.
 #   --status    print one word, OK or MODIFIED (used by qc-submit.sh for the step stamp).   --hash  print the manifest hash (sha256 of MANIFEST.sha256).
 #   --update    MAINTAINER ONLY: regenerate MANIFEST.sha256 after a reviewed release. Agents never run it (docs/integrity.md).
-# This detects accidental or casual edits; it cannot stop a determined user (they can edit this script too). Real enforcement is server side.
+# This detects accidental or casual edits; it cannot stop a determined user (they can edit this script too). Protection rests on the maintainer-only rule (SKILL.md 0A.4); the maintainer reads the stamp.
 R=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd); M=$R/MANIFEST.sha256; cd "$R" || exit 1
 listed() { { ls VERSION SKILL.md README.md config/input.example.yaml docs/*.md docs/roles/*.md tests/selftest.sh 2>/dev/null
 	find tools -type f ! -name '*.pyc' ! -path '*/__pycache__/*' 2>/dev/null; } | grep -v '^docs/FIXLOG' | LC_ALL=C sort -u; }

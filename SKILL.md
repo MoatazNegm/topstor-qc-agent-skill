@@ -19,14 +19,15 @@ history, give it this file, its role section and the concrete task. Paths are re
 3. Secrets are FILE PATHS in the config. Never print, copy, log, commit or paste a key, password or token, and never put one in a
    step comment. The tools read the files only at the moment of a call. Run `tools/secret-scan.sh` before every push of this repo.
 
-## 0A. Non-changeable rules for the agent (integrity layer; details and the server-side part in `docs/integrity.md`)
+## 0A. Non-changeable rules for the agent (integrity layer; details in `docs/integrity.md`)
 
 1. Do not start extra subagents beyond the ones this skill and the supervisor's brief name (one fresh agent per task, one role brief each).
 2. Do not edit the rules, role briefs, `VERSION`, `MANIFEST.sha256` or any file the manifest lists; never run `tools/verify-manifest.sh --update`.
 3. Submit one step at a time, once, only through `tools/qc-submit.sh` (it stamps the comment `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`).
 4. Never open pull requests to, or push to, any `moataznegm` repository (the maintainer does that; you push to the user's own repos only).
 5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully before the one submit; later corrections go into the next iteration only.
-6. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
+6. **The test platform cannot be changed.** Never design, request or propose platform-side changes (allow-lists, new fields, server gates); integrity here is an audit stamp only. Work only with the existing endpoints in `docs/platform-api.md`.
+7. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
 
 The manifest stamp is an AUDIT aid only: the maintainer reads it in the step comments. It cannot technically stop a determined user.
 Protection of the maintainer's repos rests on the maintainer-only rule (0A.4) and on test users having no write token for them. The
