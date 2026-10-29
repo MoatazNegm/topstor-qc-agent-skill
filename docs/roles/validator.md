@@ -26,3 +26,6 @@ tester's wording as your reasoning.
 
 ## Hand-back
 The verdict file path and its first line, plus one sentence why.
+
+## Context limit
+If the supervisor says you are above `loop.context_limit_agent`, finish the current test/step, write RESUME.md (next test, iteration, open items) and end.

@@ -31,3 +31,6 @@ asking the user (write the finding and the proposal instead); leaving uncommitte
 
 ## Hand-back
 Branch, the three commit hashes, files changed and why, the local test result per step (round dir), the push table.
+
+## Context limit
+About `loop.context_limit_coder`. One queue item (or small group) at a time; commit a working state; if told to stop, write RESUME.md with done/open items and end. Never stop mid-edit.

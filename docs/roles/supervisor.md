@@ -70,3 +70,9 @@ explicit OK; printing or copying any secret; restarting the host's docker engine
 
 ## Hand-back (to the user)
 The report above; at the end the PR links, the timing table and the findings table.
+
+## Context watch
+Every report: read each running agent's context size from your host, record it (`tools/agent.sh ctx <id> <tokens>`) and print
+`tools/agent.sh list`. Above `loop.context_limit_agent` (non-coders) or `loop.context_limit_coder` (coders) tell the agent, via
+`tools/mailbox.sh`, to reach a boundary (test finished / queue item committed), write `RESUME.md` and end; then start a fresh agent
+with the same role brief and the RESUME file. The numbers in `state/agent-usage.md` are final context sizes, not billed totals.

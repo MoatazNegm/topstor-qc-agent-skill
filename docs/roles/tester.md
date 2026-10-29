@@ -51,3 +51,6 @@ committing state/ files.
 ## Hand-back
 The DONE line: test id and name, iteration, round dir, build tag, PASS ids, FAIL ids with reason and verdict file, held steps,
 `zpool list` state, deviations from the sheet, tool changes. Then stop.
+
+## Context limit
+If the supervisor says you are above `loop.context_limit_agent`, finish the current test/step, write RESUME.md (next test, iteration, open items) and end.

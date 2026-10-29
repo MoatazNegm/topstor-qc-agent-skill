@@ -121,6 +121,8 @@ loop:
   iteration_tests: []           # optional fixed list of test ids per iteration; empty = learn it from GET /tests
   report_interval_minutes: 3
   now_line_minutes: 3           # tester writes a NOW line at least this often
+  context_limit_agent: 150000   # tokens: a non-coder agent above this at a test boundary finishes its test, writes RESUME and ends
+  context_limit_coder: 250000   # coders: split by queue item, commit a working state, then end
   stuck_after_reports: 2        # supervisor nudges an agent after this many reports without change
   fail_needs_user_ok: false     # false = a validated FAIL (real app bug, validator verdict file) is submitted by the agents themselves.
                                 # true  = strict stop rule of the original QC tester: STOP and ask the user before ANY FAIL is submitted.

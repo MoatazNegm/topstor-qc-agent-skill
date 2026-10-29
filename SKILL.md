@@ -26,6 +26,15 @@ an agent is never "resumed" with another agent's history. Long work keeps its st
 `run.log`, `state/loop.json`) so that any replacement can continue. Messages between agents go through `tools/mailbox.sh`;
 a message from an agent is never the user's approval.
 
+**Context limit (applies to any LLM or agent host).** A fresh agent pays a fixed start-up cost (instructions + tools) and every
+finished test adds output that later tests do not need. So the supervisor keeps watching each agent's context size
+(`tools/agent.sh ctx <id> <tokens>`; take the number from whatever your host reports for the agent's last model call: input + cached
+input tokens, or characters / 4 as an estimate; `tools/agent.sh list` shows it). Non-coder agents (tester, validator, proof,
+sheet writer) above `loop.context_limit_agent` (default 150000) at a TEST BOUNDARY are told to finish the current test, write
+`state/rounds/<round>/RESUME.md` (next test, iteration, open items) and end; a fresh agent continues. Coders get
+`loop.context_limit_coder` (default 250000), work one queue item (or a small group) at a time, commit a working state before
+ending and hand back done/open items. Never end an agent in the middle of an edit, a node stop/start or an unsubmitted step.
+
 ### 1.1 SUPERVISOR (talks to the user)
 - **Goal:** keep the loop going until one full iteration passes with no code change, then have the pull requests opened; report to
   the user at a fixed interval; stay free for the user's instructions (any work longer than a few commands goes to an agent).
