@@ -25,7 +25,8 @@ history, give it this file, its role section and the concrete task. Paths are re
 2. Do not edit the rules, role briefs, `VERSION`, `MANIFEST.sha256` or any file the manifest lists; never run `tools/verify-manifest.sh --update`.
 3. Submit one step at a time, once, only through `tools/qc-submit.sh` (it stamps the comment `skill vX.Y.Z manifest <12 hex> OK|MODIFIED`).
 4. Never open pull requests to, or push to, any `moataznegm` repository (the maintainer does that; you push to the user's own repos only).
-5. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
+5. **A step's PASS/FAIL status can never be changed after it is submitted.** No re-check, replace, supersede, delete or resubmit of a stored step, and never ask the user to allow it. Judge carefully BEFORE the one submit; a wrong result stays and any correction is shown only by the next iteration.
+6. If `tools/verify-manifest.sh` reports `MODIFIED` and nobody intended it, stop and tell the user before submitting.
 
 The manifest stamp is an AUDIT aid only. It cannot technically stop a determined user; real enforcement is server side (the platform
 allow-lists manifest hashes, test users have no write token for the maintainer's repos, and merge eligibility is computed by the
