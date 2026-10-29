@@ -10,7 +10,7 @@ pull-request request for all three repos; the maintainer alone opens the pull re
 
 ## New user: paste this
 
-> Clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git into a NEW directory ~/topstor-qc/skill using my GitHub read token from the file <PATH> (git credential store, never print it), then read docs/SETUP.md in it and follow it exactly.
+> Clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git into a NEW directory ~/topstor-qc/skill using my GitHub read token from the file <PATH> (one line `https:// <user> : <token> @github.com` without the spaces; use `git -c credential.helper='store --file=<PATH>' clone`; never print it), then read docs/SETUP.md in it and follow it exactly.
 
 The maintainer must give you first: read access to this private repo and a platform tester key. Everything else is in `docs/SETUP.md`.
 
