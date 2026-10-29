@@ -9,6 +9,8 @@ This file is the prompt. It names no agent product and no built-in tool: everyth
 `tools/`) and **HTTP** (curl inside those scripts). "Start an agent" below means: start a NEW agent of your framework with an empty
 history, give it this file, its role section and the concrete task. Paths are relative to the skill root.
 
+New user on a fresh clone: follow `docs/SETUP.md` first.
+
 ## 0. First action of EVERY agent (no exception)
 
 1. Run `tools/preflight.sh`. **rc 2 = `config/input.yaml` is missing or incomplete: STOP, tell the user exactly which fields are

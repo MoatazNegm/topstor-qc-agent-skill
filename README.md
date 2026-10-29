@@ -8,6 +8,12 @@ step it cannot pass for an independent validator, fixes real app bugs in your To
 proves the whole test locally, pushes the branch, returns to the platform, and after one full iteration with no code change writes the
 pull-request request for all three repos; the maintainer alone opens the pull requests to the upstream `moataznegm` repos.
 
+## New user: paste this
+
+> Clone https://github.com/MoatazNegm/topstor-qc-agent-skill.git into a NEW directory ~/topstor-qc/skill using my GitHub read token from the file <PATH> (git credential store, never print it), then read docs/SETUP.md in it and follow it exactly.
+
+The maintainer must give you first: read access to this private repo and a platform tester key. Everything else is in `docs/SETUP.md`.
+
 ## Quick start
 
 1. Requirements on the agent machine: `bash`, `curl`, `python3` (no extra modules), `git`, `zip`/`unzip`, plus `docker` (container
@@ -31,6 +37,7 @@ pull-request request for all three repos; the maintainer alone opens the pull re
 | `SKILL.md` | the prompt: roles (supervisor, tester, validator, coder), the loop rules, safety summary |
 | `config/input.example.yaml` | every input the agent needs (secrets as file paths only) |
 | `tools/` | node wrappers, cluster tools, platform tools, git/PR tools, reports, supervisor tools (`tools/README.md`) |
+| `docs/SETUP.md` | the new-user bootstrap the agent follows after the clone |
 | `docs/loop-rules.md` | the loop in detail: submission, stop and hold rules, FAIL, iterations, clean count, branches |
 | `docs/safety.md` | cluster safety rules: settle, stop, iSCSI, pools, disks, builds, reboots |
 | `docs/platform-api.md` | the QualityCheck endpoints the loop uses, headers, checks after each submit |
